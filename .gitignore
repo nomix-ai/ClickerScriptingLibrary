@@ -1,0 +1,6 @@
+/venv
+/.idea
+config.json
+**/__pycache__/
+.DS_Store
+/.vscode
