@@ -7,3 +7,4 @@ config = ConfigHandler(config_path)
 
 API_URL = config.get('API_URL', 'https://panel.nomixclicker.com/clicker/v1')
 API_KEY = config.get('API_KEY', '')
+DEVICE_ID = config.get('DEVICE_ID', 'your-device-id')
