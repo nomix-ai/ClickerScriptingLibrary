@@ -9,9 +9,9 @@ def main():
 
     mouse.swipe((28813, 1000), down=10000)
     mouse.click((6523, 6689))
-    sleep(5)
+    sleep(10)
     mouse.click((6523, 6689))
-    sleep(5)
+    sleep(10)
     mouse.click((16700, 26000))
 
 
