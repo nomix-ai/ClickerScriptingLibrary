@@ -5,29 +5,55 @@ from .environment import API_KEY, API_URL
 HEADERS = {"X-API-Key": API_KEY}
 
 
-def set_coordinates(device_id, coords, is_pressed=False):
-    """Set absolute cursor position.
+def get_devices():
+    """Get list of connected devices.
+    
+    Returns:
+        List of device IDs
+    """
+    response = requests.get(f"{API_URL}/devices", headers=HEADERS)
+    result = response.json()
+    print(result)
+    return result
+
+
+def restart(device_id):
+    """Restart device.
+    
+    Args:
+        device_id: Device ID
+    """
+    response = requests.post(f"{API_URL}/{device_id}/restart", headers=HEADERS)
+    result = response.json()
+    print(result)
+    return result
+
+
+def click(device_id, coords, duration=300):
+    """Click at specified coordinates.
     
     Args:
         device_id: Device ID
         coords: Tuple of (x, y) coordinates
-        is_pressed: Whether mouse button is pressed
+        duration: Click duration in milliseconds
     """
     x, y = coords
     payload = {
         "left": x,
         "top": y,
-        "is_pressed": is_pressed
+        "duration": duration
     }
     response = requests.post(
-        f"{API_URL}/{device_id}/coordinates",
+        f"{API_URL}/{device_id}/click",
         headers=HEADERS,
         json=payload
     )
-    return response.json()
+    result = response.json()
+    print(result)
+    return result
 
 
-def move_to(device_id, start, end, is_pressed=False, duration=300):
+def move(device_id, start, end, is_pressed=False, duration=300):
     """Move mouse from start to end coordinates. Mouse released at end if pressed.
     
     Args:
@@ -52,4 +78,6 @@ def move_to(device_id, start, end, is_pressed=False, duration=300):
         headers=HEADERS,
         json=payload
     )
-    return response.json()
+    result = response.json()
+    print(result)
+    return result

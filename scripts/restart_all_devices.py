@@ -1,15 +1,11 @@
-import requests
-
-from utils.api_helper import HEADERS
-from utils.environment import API_URL
+from utils.api_helper import get_devices, restart
 
 
 def main():
-    devices = requests.get(f"{API_URL}/devices", headers=HEADERS).json()
+    devices = get_devices()
 
     for device_id in devices:
-        result = requests.post(f"{API_URL}/{device_id}/restart", headers=HEADERS).json()
-        print(result)
+        restart(device_id)
 
 
 if __name__ == '__main__':
