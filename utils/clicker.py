@@ -1,8 +1,8 @@
 from utils.api_helper import move, click
 
 
-class MouseController:
-    """Mouse controller that tracks cursor position and provides convenient methods."""
+class Clicker:
+    """Tracks cursor position and provides convenient methods."""
 
     def __init__(self, device_id):
         """Initialize mouse controller.
