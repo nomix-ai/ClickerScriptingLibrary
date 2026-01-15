@@ -9,9 +9,9 @@ NomixClicker is a controlling dongle for iOS. It allows manual control, automati
 Part of the features are work-in-progress, see the [Roadmap](https://nomixclicker.com/).
 
 <p align="center">
-  <img src="res/airplane-mode-on-off.gif" alt="Airplane Mode Toggle Example" width="721" height="466">
+  <img src="res/reddit-script-example.gif" width="480" height="360">
   <br>
-  <em style="font-size: 0.85em; opacity: 0.7;">Example: airplane mode on-off. Screen streaming stops and resumes once connection is back.</em>
+  <em style="font-size: 0.85em; opacity: 0.7;">Example: quick script for Reddit warmup.</em>
 </p>
 
 ### How To Use This Library?
