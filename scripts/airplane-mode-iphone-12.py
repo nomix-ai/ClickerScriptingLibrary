@@ -8,14 +8,11 @@ def main():
     clicker = Clicker(DEVICE_ID)
 
     clicker.swipe((28813, 1000), down=10000)
-    clicker.move_to((6523, 6689))
-    clicker.click()
+    clicker.click((6523, 6689))
     sleep(10)
-    clicker.move_to((6523, 6689))
-    clicker.click()
+    clicker.click((6523, 6689))
     sleep(10)
-    clicker.move_to((16700, 26000))
-    clicker.click()
+    clicker.click((16700, 26000))
 
 
 if __name__ == '__main__':

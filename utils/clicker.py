@@ -50,22 +50,24 @@ class Clicker:
         self.current_coords = end_coords
         return result
 
-    def click(self, coords=None, duration=300):
+    def click(self, coords, duration=300):
         """Move to coordinates and click.
 
         Args:
             coords: Click coordinates tuple (x, y)
             duration: Click duration in milliseconds
         """
-        if coords is not None:
-            move(
-                self.device_id,
-                self.current_coords,
-                coords,
-                is_pressed=False,
-                duration=0
-            )
-            self.current_coords = coords
+        # Move to click position first
+        move(
+            self.device_id,
+            self.current_coords,
+            coords,
+            is_pressed=False,
+            duration=0
+        )
+        self.current_coords = coords
+
+        # Perform click
         result = click(self.device_id, duration=duration)
         return result
 
