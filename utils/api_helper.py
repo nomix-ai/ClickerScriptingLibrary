@@ -30,10 +30,11 @@ def restart(device_id):
 
 
 def click(device_id, duration=300):
-    """Click at current cursor position.
+    """Click at specified coordinates.
 
     Args:
         device_id: Device ID
+        coords: Tuple of (x, y) coordinates
         duration: Click duration in milliseconds
     """
     payload = {
