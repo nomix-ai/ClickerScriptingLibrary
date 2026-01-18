@@ -70,4 +70,3 @@ class Clicker:
         # Perform click
         result = click(self.device_id, duration=duration)
         return result
-
