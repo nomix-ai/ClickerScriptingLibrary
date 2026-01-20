@@ -2,6 +2,8 @@ import requests
 
 from .environment import API_KEY, API_URL
 
+# API reference: https://panel.nomixclicker.com/docs
+
 HEADERS = {"X-API-Key": API_KEY}
 
 
@@ -72,6 +74,26 @@ def move(device_id, start, end, is_pressed=False, duration=300):
     }
     response = requests.post(
         f"{API_URL}/{device_id}/move",
+        headers=HEADERS,
+        json=payload
+    )
+    result = response.json()
+    print(result)
+    return result
+
+
+def type_text(device_id, text):
+    """Type text on the device.
+    
+    Args:
+        device_id: Device ID
+        text: Text string to type (1-10000 characters)
+    """
+    payload = {
+        "text": text
+    }
+    response = requests.post(
+        f"{API_URL}/{device_id}/keyboard/type",
         headers=HEADERS,
         json=payload
     )

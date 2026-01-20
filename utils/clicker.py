@@ -1,4 +1,4 @@
-from utils.api_helper import move, click
+from utils.api_helper import move, click, type_text
 
 
 class Clicker:
@@ -69,4 +69,13 @@ class Clicker:
 
         # Perform click
         result = click(self.device_id, duration=duration)
+        return result
+
+    def type(self, text):
+        """Type text on the device.
+        
+        Args:
+            text: Text string to type
+        """
+        result = type_text(self.device_id, text)
         return result
