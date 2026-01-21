@@ -12,7 +12,7 @@ def main():
     clicker.swipe((16600, 32500), up=10000)
 
     # Reset in case Recent apps were opened
-    clicker.click((31000, 27500))
+    clicker.click((31000, 30000))
 
     # Swipe to the end most right of home screens
     clicker.swipe((31000, 27500), left=15000)
