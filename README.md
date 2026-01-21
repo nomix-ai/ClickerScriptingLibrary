@@ -42,4 +42,5 @@ The Library is designed to be easily extendable. Here are the scripts provided a
 
 - [**restart_all_devices.py**](scripts/restart_all_devices.py) - Restarts all devices associated with your account.
 - [**airplane-mode-iphone-12.py**](scripts/airplane-mode-iphone-12.py) - Toggles airplane mode on and off on iPhone 12.
+- [**switch-screen-viewing-iphone-12.py**](scripts/switch-screen-viewing-iphone-12.py) - Turns on/off Clicker screen viewing.
 
