@@ -15,9 +15,9 @@ def main():
     clicker.click((31000, 30000))
 
     # Swipe to the end most right of home screens
-    clicker.swipe((31000, 27500), left=15000)
-    clicker.swipe((31000, 27500), left=15000)
-    clicker.swipe((31000, 27500), left=15000)
+    clicker.swipe((31000, 27500), left=20000)
+    clicker.swipe((31000, 27500), left=20000)
+    clicker.swipe((31000, 27500), left=20000)
 
     # App Library
     clicker.click((16600, 3500))
