@@ -1,3 +1,5 @@
+import json
+
 import requests
 
 from .environment import API_KEY, API_URL
@@ -130,4 +132,125 @@ def type_text(device_id, text):
     )
     result = response.json()
     print(result)
+    return result
+
+
+# --- Agent API ---
+
+def run_agent(device_id, task):
+    """Start an AI agent task on the device.
+
+    Args:
+        device_id: Device ID
+        task: Task instruction string
+
+    Returns:
+        dict with task_id, status, etc.
+    """
+    response = requests.post(
+        f"{API_URL}/{device_id}/agent/run",
+        headers=HEADERS,
+        json={"task": task},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_agent_task(device_id, task_id):
+    """Get agent task status and result.
+
+    Args:
+        device_id: Device ID
+        task_id: Task ID from run_agent()
+
+    Returns:
+        dict with status, result, events, etc.
+    """
+    response = requests.get(
+        f"{API_URL}/{device_id}/agent/{task_id}",
+        headers=HEADERS,
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def cancel_agent_task(device_id, task_id):
+    """Cancel a running agent task.
+
+    Args:
+        device_id: Device ID
+        task_id: Task ID from run_agent()
+
+    Returns:
+        dict with updated task status
+    """
+    response = requests.delete(
+        f"{API_URL}/{device_id}/agent/{task_id}",
+        headers=HEADERS,
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def stream_agent(device_id, task_id, callback=None):
+    """Stream agent task progress via SSE.
+
+    Args:
+        device_id: Device ID
+        task_id: Task ID from run_agent()
+        callback: Optional function(event_data: dict) called for each step.
+                  If None, prints events to stdout.
+
+    Returns:
+        Final task result string or None
+    """
+    response = requests.get(
+        f"{API_URL}/{device_id}/agent/{task_id}/stream",
+        headers=HEADERS,
+        stream=True,
+        timeout=300,
+    )
+    response.raise_for_status()
+
+    result = None
+    try:
+        for line in response.iter_lines(decode_unicode=True):
+            if not line or line.startswith(":"):
+                continue  # skip keepalive comments and empty lines
+
+            if line.startswith("event: done"):
+                continue  # next data line has the final result
+
+            if line.startswith("data: "):
+                data = json.loads(line[6:])
+
+                # Final event
+                if "status" in data and "step" not in data:
+                    result = data.get("result")
+                    if callback:
+                        callback(data)
+                    else:
+                        status = data.get("status", "?")
+                        print(f"\n--- Agent {status}: {result}")
+                    break
+
+                # Step event
+                if callback:
+                    callback(data)
+                else:
+                    step = data.get("step", "?")
+                    max_steps = data.get("max_steps", "?")
+                    action = data.get("action", "?")
+                    res = data.get("result", "?")
+                    print(f"[{step}/{max_steps}] {action} -> {res}")
+    except (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError):
+        print("\n--- Stream disconnected. Fetching final status...")
+        task = get_agent_task(device_id, task_id)
+        result = task.get("result")
+        status = task.get("status", "?")
+        print(f"--- Agent {status}: {result}")
+
     return result
