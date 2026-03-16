@@ -6,7 +6,8 @@ from .environment import API_KEY, API_URL
 
 # API reference: https://panel.nomixclicker.com/docs
 
-HEADERS = {"X-API-Key": API_KEY}
+session = requests.Session()
+session.headers.update({"X-API-Key": API_KEY})
 
 
 def get_devices():
@@ -15,7 +16,7 @@ def get_devices():
     Returns:
         List of device IDs
     """
-    response = requests.get(f"{API_URL}/devices", headers=HEADERS)
+    response = session.get(f"{API_URL}/devices")
     result = response.json()
     print(result)
     return result
@@ -27,7 +28,7 @@ def restart(device_id):
     Args:
         device_id: Device ID
     """
-    response = requests.post(f"{API_URL}/{device_id}/restart", headers=HEADERS)
+    response = session.post(f"{API_URL}/{device_id}/restart")
     result = response.json()
     print(result)
     return result
@@ -44,9 +45,8 @@ def click(device_id, duration=300):
     payload = {
         "duration": duration
     }
-    response = requests.post(
+    response = session.post(
         f"{API_URL}/{device_id}/click",
-        headers=HEADERS,
         json=payload
     )
     result = response.json()
@@ -74,9 +74,8 @@ def move(device_id, start, end, is_pressed=False, duration=300):
         "is_pressed": is_pressed,
         "duration": duration
     }
-    response = requests.post(
+    response = session.post(
         f"{API_URL}/{device_id}/move",
-        headers=HEADERS,
         json=payload
     )
     result = response.json()
@@ -91,7 +90,7 @@ def get_screen_state(device_id):
         dict with app_name, screen_description, elements[]
         Each element has: type, content, interactivity, center [x, y], bbox
     """
-    response = requests.post(f"{API_URL}/{device_id}/screen-state", headers=HEADERS, timeout=60)
+    response = session.post(f"{API_URL}/{device_id}/screen-state", timeout=60)
     response.raise_for_status()
     return response.json()
 
@@ -125,9 +124,8 @@ def type_text(device_id, text):
     payload = {
         "text": text
     }
-    response = requests.post(
+    response = session.post(
         f"{API_URL}/{device_id}/keyboard/type",
-        headers=HEADERS,
         json=payload
     )
     result = response.json()
@@ -147,9 +145,8 @@ def run_agent(device_id, task):
     Returns:
         dict with task_id, status, etc.
     """
-    response = requests.post(
+    response = session.post(
         f"{API_URL}/{device_id}/agent/run",
-        headers=HEADERS,
         json={"task": task},
         timeout=10,
     )
@@ -167,9 +164,8 @@ def get_agent_task(device_id, task_id):
     Returns:
         dict with status, result, events, etc.
     """
-    response = requests.get(
+    response = session.get(
         f"{API_URL}/{device_id}/agent/{task_id}",
-        headers=HEADERS,
         timeout=10,
     )
     response.raise_for_status()
@@ -186,9 +182,8 @@ def cancel_agent_task(device_id, task_id):
     Returns:
         dict with updated task status
     """
-    response = requests.delete(
+    response = session.delete(
         f"{API_URL}/{device_id}/agent/{task_id}",
-        headers=HEADERS,
         timeout=10,
     )
     response.raise_for_status()
