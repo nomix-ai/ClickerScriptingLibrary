@@ -7,7 +7,7 @@ Usage:
 
 import sys
 
-from utils.api_helper import run_agent, stream_agent
+from utils.api_helper import run_agent, poll_agent
 from utils.environment import DEVICE_ID
 
 
@@ -27,7 +27,7 @@ def main():
     print(f"Task started: {task_id}\n")
 
     # Stream progress in real-time
-    final_result = stream_agent(DEVICE_ID, task_id)
+    final_result = poll_agent(DEVICE_ID, task_id)
 
     if final_result:
         print(f"\nResult: {final_result}")
