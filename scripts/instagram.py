@@ -1,4 +1,3 @@
-import logging
 import random
 import time
 from time import sleep
@@ -7,48 +6,33 @@ from utils.recognition import Screen, get_screen
 from utils.clicker import Clicker
 from utils.environment import DEVICE_ID
 
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-    level=logging.INFO,
-)
-log = logging.getLogger(__name__)
-
 
 def screen_state(context=""):
     """Get screen state with timing and detailed logging."""
-    log.info("screen-state request (%s)...", context)
+    print(f"screen-state request ({context})...")
     start = time.monotonic()
     screen = get_screen(DEVICE_ID)
     elapsed = time.monotonic() - start
-    log.info(
-        "screen-state done in %.1fs | app=%s | %s | %d elements",
-        elapsed,
-        screen.app_name,
-        screen.description,
-        len(screen.elements),
-    )
-    for el in screen.elements:
-        log.debug("  %s", el)
+    print(f"screen-state done in {elapsed:.1f}s | app={screen.app_name} | {screen.description} | {len(screen.elements)} elements")
     return screen
 
 
 def open_instagram(clicker):
     """Open Instagram from iOS home screen via Spotlight search."""
-    log.info("Opening Spotlight...")
+    print("Opening Spotlight...")
     clicker.swipe((16000, 16000), down=8000, duration=300)
     sleep(0.5)
 
-    log.info("Typing 'instagram'...")
+    print("Typing 'instagram'...")
     clicker.type("instagram")
     sleep(1.0)
 
     screen = screen_state("spotlight_search")
     btn = screen.find("instagram")
     if not btn:
-        log.warning("Instagram not found in Spotlight results")
+        print("WARNING: Instagram not found in Spotlight results")
         return False
-    log.info("Tapping Instagram at (%d, %d)...", btn.x, btn.y)
+    print(f"Tapping Instagram at ({btn.x}, {btn.y})...")
     clicker.click(btn.center)
     sleep(2.0)
     return True
@@ -64,21 +48,18 @@ def open_reels(clicker):
             break
 
     if home_idx is None:
-        log.warning(
-            "Home tab not found, elements: %s",
-            [e.content for e in screen.elements],
-        )
+        print(f"WARNING: Home tab not found, elements: {[e.content for e in screen.elements]}")
         return False
 
     # Reels = next interactive button after Home
     for el in screen.elements[home_idx + 1 :]:
         if el.is_interactive:
-            log.info("Reels tab (after Home) at (%d, %d), tapping...", el.x, el.y)
+            print(f"Reels tab (after Home) at ({el.x}, {el.y}), tapping...")
             clicker.click(el.center)
             sleep(1.5)
             return True
 
-    log.warning("No interactive element found after Home")
+    print("WARNING: No interactive element found after Home")
     return False
 
 
@@ -93,13 +74,13 @@ def next_reel(clicker):
 
 def like_reel(clicker, coords):
     """Tap the like (heart) button at cached coordinates."""
-    log.info("Liking at (%d, %d)...", *coords)
+    print(f"Liking at {coords}...")
     clicker.click(coords)
 
 
 def follow_account(clicker, coords):
     """Tap the follow button at cached coordinates."""
-    log.info("Following at (%d, %d)...", *coords)
+    print(f"Following at {coords}...")
     clicker.click(coords)
 
 
@@ -119,7 +100,7 @@ COMMENTS = [
 
 def open_comments(clicker, coords):
     """Tap the comment icon at cached coordinates."""
-    log.info("Opening comments at (%d, %d)...", *coords)
+    print(f"Opening comments at {coords}...")
     clicker.click(coords)
     sleep(1.5)
     return True
@@ -147,18 +128,18 @@ def write_comment(clicker):
             el = screen.find(kw, interactive_only=False)
             if el:
                 _comment_input_coords = el.center
-                log.info("Cached comment input at (%d, %d)", *_comment_input_coords)
+                print(f"Cached comment input at {_comment_input_coords}")
                 break
         if _comment_input_coords is None:
-            log.warning("Comment input not found, skipping")
+            print("WARNING: Comment input not found, skipping")
             return
 
-    log.info("Tapping comment input at (%d, %d)...", *_comment_input_coords)
+    print(f"Tapping comment input at {_comment_input_coords}...")
     clicker.click(_comment_input_coords)
     sleep(1.0)
 
     text = random.choice(COMMENTS)
-    log.info("Typing: %s", text)
+    print(f"Typing: {text}")
     clicker.type(text)
     sleep(0.5)
 
@@ -168,12 +149,12 @@ def write_comment(clicker):
         post_btn = screen.find("post") or screen.find("send")
         if post_btn:
             _comment_post_coords = post_btn.center
-            log.info("Cached post button at (%d, %d)", *_comment_post_coords)
+            print(f"Cached post button at {_comment_post_coords}")
         else:
-            log.warning("Post button not found, skipping")
+            print("WARNING: Post button not found, skipping")
             return
 
-    log.info("Posting comment at (%d, %d)...", *_comment_post_coords)
+    print(f"Posting comment at {_comment_post_coords}...")
     clicker.click(_comment_post_coords)
     sleep(1.0)
 
@@ -191,9 +172,9 @@ def _cache_button_coords(screen):
         btn = screen.find(name)
         if btn:
             coords[name] = btn.center
-            log.info("Cached %s button at (%d, %d)", name, *btn.center)
+            print(f"Cached {name} button at {btn.center}")
         else:
-            log.warning("Button '%s' not found in first reel", name)
+            print(f"WARNING: Button '{name}' not found in first reel")
     return coords
 
 
@@ -225,19 +206,19 @@ def browse_reels(clicker, count=100):
     btn_coords = {}  # cached from first non-ad reel
 
     for i in range(count):
-        log.info("--- Reel %d/%d ---", i + 1, count)
+        print(f"--- Reel {i + 1}/{count} ---")
 
         try:
             # One screen_state per reel: ad check + cache buttons on first reel
             screen = screen_state(f"reel_{i + 1}")
         except Exception as e:
-            log.error("screen_state failed: %s, skipping reel", e)
+            print(f"ERROR: screen_state failed: {e}, skipping reel")
             next_reel(clicker)
             sleep(random.uniform(0.3, 0.8))
             continue
 
         if is_ad(screen):
-            log.info("[Ad] Skipping...")
+            print("[Ad] Skipping...")
             # Close webview if opened
             btn = screen.find("close") or screen.find("back")
             if btn:
@@ -252,7 +233,7 @@ def browse_reels(clicker, count=100):
 
         # Watch for a random duration (1.5-6s)
         watch_time = random.uniform(1.5, 6.0)
-        log.info("Watching for %.1fs...", watch_time)
+        print(f"Watching for {watch_time:.1f}s...")
         sleep(watch_time)
 
         # ~25% chance to like (TEST: 100%)
