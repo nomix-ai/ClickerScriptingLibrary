@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import Self
 
@@ -82,7 +83,11 @@ class Screen:
         )
 
 
-def get_screen(device_id: str) -> Screen:
+def get_screen(device_id: str, context: str = "") -> Screen:
     """Get current screen state as a Screen object."""
-    raw = get_screen_state(device_id)
-    return Screen.from_dict(raw)
+    print(f"screen-state request ({context})..." if context else "screen-state request...")
+    start = time.monotonic()
+    screen = Screen.from_dict(get_screen_state(device_id))
+    elapsed = time.monotonic() - start
+    print(f"screen-state done in {elapsed:.1f}s | app={screen.app_name} | {screen.description} | {len(screen.elements)} elements")
+    return screen

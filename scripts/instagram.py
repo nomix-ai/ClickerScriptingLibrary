@@ -6,16 +6,6 @@ from utils.clicker import Clicker
 from utils.environment import DEVICE_ID
 
 
-def screen_state(context=""):
-    """Get screen state with timing and detailed logging."""
-    print(f"screen-state request ({context})...")
-    start = time.monotonic()
-    screen = get_screen(DEVICE_ID)
-    elapsed = time.monotonic() - start
-    print(f"screen-state done in {elapsed:.1f}s | app={screen.app_name} | {screen.description} | {len(screen.elements)} elements")
-    return screen
-
-
 def open_instagram(clicker):
     """Open Instagram from iOS home screen via Spotlight search."""
     print("Opening Spotlight...")
@@ -26,7 +16,7 @@ def open_instagram(clicker):
     clicker.type("instagram")
     time.sleep(1.0)
 
-    screen = screen_state("spotlight_search")
+    screen = get_screen(DEVICE_ID, "spotlight_search")
     btn = screen.find("instagram")
     if not btn:
         print("WARNING: Instagram not found in Spotlight results")
@@ -38,7 +28,7 @@ def open_instagram(clicker):
 
 
 def open_reels(clicker):
-    screen = screen_state("open_reels")
+    screen = get_screen(DEVICE_ID, "open_reels")
 
     # Try to find Reels tab directly by label
     reels_btn = screen.find("reels")
@@ -123,7 +113,7 @@ def write_comment(clicker):
 
     # First call: find and cache comment input position
     if _comment_input_coords is None:
-        screen = screen_state("comment_input_init")
+        screen = get_screen(DEVICE_ID, "comment_input_init")
         input_keywords = [
             "add a comment",
             "add comment",
@@ -152,7 +142,7 @@ def write_comment(clicker):
 
     # First call: find and cache post button position
     if _comment_post_coords is None:
-        screen = screen_state("comment_post_init")
+        screen = get_screen(DEVICE_ID, "comment_post_init")
         post_btn = screen.find("post") or screen.find("send")
         if post_btn:
             _comment_post_coords = post_btn.center
