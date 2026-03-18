@@ -7,30 +7,24 @@ Usage:
 
 import sys
 
-from utils.api_helper import run_agent, poll_agent
+from utils.agent import Agent
 from utils.environment import DEVICE_ID
 
 
 def main():
     if len(sys.argv) < 2:
         print('Usage: python -m scripts.ai_agent "your task instruction"')
-        print('Configure DEVICE_ID in config.json')
         sys.exit(1)
 
     task = " ".join(sys.argv[1:])
     print(f"Device: {DEVICE_ID}")
     print(f"Task: {task}\n")
 
-    # Start the agent
-    result = run_agent(DEVICE_ID, task)
-    task_id = result["task_id"]
-    print(f"Task started: {task_id}\n")
+    agent = Agent(DEVICE_ID)
+    result = agent.run_and_wait(task)
 
-    # Stream progress in real-time
-    final_result = poll_agent(DEVICE_ID, task_id)
-
-    if final_result:
-        print(f"\nResult: {final_result}")
+    if result:
+        print(f"\nResult: {result}")
 
 
 if __name__ == "__main__":
