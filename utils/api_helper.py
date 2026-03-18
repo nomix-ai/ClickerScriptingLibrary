@@ -93,21 +93,6 @@ def get_screen_state(device_id):
     return response.json()
 
 
-def tap(device_id, x, y, duration=300):
-    """Move to coordinates and click in a single call.
-
-    Args:
-        device_id: Device ID
-        x: X coordinate
-        y: Y coordinate
-        duration: Click duration in milliseconds
-    """
-    payload = {"left": x, "top": y, "duration": duration}
-    response = session.post(f"{API_URL}/{device_id}/tap", json=payload)
-    result = response.json()
-    print(result)
-    return result
-
 
 def scroll(device_id, x, y, direction, distance=300, duration=500):
     """Scroll in a direction at the given coordinates.
