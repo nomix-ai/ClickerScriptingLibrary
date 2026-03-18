@@ -15,6 +15,7 @@ def get_devices():
         List of device IDs
     """
     response = session.get(f"{API_URL}/devices")
+    response.raise_for_status()
     result = response.json()
     print(result)
     return result
@@ -33,11 +34,10 @@ def restart(device_id):
 
 
 def click(device_id, duration=300):
-    """Click at specified coordinates.
+    """Click at the current cursor position.
 
     Args:
         device_id: Device ID
-        coords: Tuple of (x, y) coordinates
         duration: Click duration in milliseconds
     """
     payload = {
@@ -136,6 +136,7 @@ def get_status(device_id):
         dict with connection status info
     """
     response = session.get(f"{API_URL}/{device_id}/status")
+    response.raise_for_status()
     result = response.json()
     print(result)
     return result
@@ -148,9 +149,7 @@ def type_text(device_id, text):
         device_id: Device ID
         text: Text string to type (1-10000 characters)
     """
-    payload = {
-        "text": text
-    }
+    payload = {"text": text}
     response = session.post(
         f"{API_URL}/{device_id}/keyboard/type",
         json=payload

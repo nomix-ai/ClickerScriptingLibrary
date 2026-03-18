@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Self
 
-from utils.api_helper import get_screen_state as _get_screen_state
+from .api_helper import get_screen_state as _get_screen_state
 
 
 @dataclass(frozen=True)

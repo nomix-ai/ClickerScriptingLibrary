@@ -1,4 +1,4 @@
-from utils.api_helper import move, click, type_text
+from .api_helper import move, click, type_text
 
 
 class Clicker:
