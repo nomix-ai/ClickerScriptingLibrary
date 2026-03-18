@@ -1,6 +1,5 @@
 import random
 import time
-from time import sleep
 
 from utils.recognition import Screen, get_screen
 from utils.clicker import Clicker
@@ -21,11 +20,11 @@ def open_instagram(clicker):
     """Open Instagram from iOS home screen via Spotlight search."""
     print("Opening Spotlight...")
     clicker.swipe((16000, 16000), down=8000, duration=300)
-    sleep(0.5)
+    time.sleep(0.5)
 
     print("Typing 'instagram'...")
     clicker.type("instagram")
-    sleep(1.0)
+    time.sleep(1.0)
 
     screen = screen_state("spotlight_search")
     btn = screen.find("instagram")
@@ -34,13 +33,22 @@ def open_instagram(clicker):
         return False
     print(f"Tapping Instagram at ({btn.x}, {btn.y})...")
     clicker.click(btn.center)
-    sleep(2.0)
+    time.sleep(2.0)
     return True
 
 
 def open_reels(clicker):
     screen = screen_state("open_reels")
 
+    # Try to find Reels tab directly by label
+    reels_btn = screen.find("reels")
+    if reels_btn:
+        print(f"Reels tab at ({reels_btn.x}, {reels_btn.y}), tapping...")
+        clicker.click(reels_btn.center)
+        time.sleep(1.5)
+        return True
+
+    # Fallback: first interactive button after Home tab
     home_idx = None
     for idx, el in enumerate(screen.elements):
         if "home" in el.content.lower():
@@ -51,12 +59,11 @@ def open_reels(clicker):
         print(f"WARNING: Home tab not found, elements: {[e.content for e in screen.elements]}")
         return False
 
-    # Reels = next interactive button after Home
-    for el in screen.elements[home_idx + 1 :]:
+    for el in screen.elements[home_idx + 1:]:
         if el.is_interactive:
             print(f"Reels tab (after Home) at ({el.x}, {el.y}), tapping...")
             clicker.click(el.center)
-            sleep(1.5)
+            time.sleep(1.5)
             return True
 
     print("WARNING: No interactive element found after Home")
@@ -102,7 +109,7 @@ def open_comments(clicker, coords):
     """Tap the comment icon at cached coordinates."""
     print(f"Opening comments at {coords}...")
     clicker.click(coords)
-    sleep(1.5)
+    time.sleep(1.5)
     return True
 
 
@@ -136,12 +143,12 @@ def write_comment(clicker):
 
     print(f"Tapping comment input at {_comment_input_coords}...")
     clicker.click(_comment_input_coords)
-    sleep(1.0)
+    time.sleep(1.0)
 
     text = random.choice(COMMENTS)
     print(f"Typing: {text}")
     clicker.type(text)
-    sleep(0.5)
+    time.sleep(0.5)
 
     # First call: find and cache post button position
     if _comment_post_coords is None:
@@ -152,17 +159,18 @@ def write_comment(clicker):
             print(f"Cached post button at {_comment_post_coords}")
         else:
             print("WARNING: Post button not found, skipping")
+            _comment_input_coords = None  # reset both so next call re-discovers
             return
 
     print(f"Posting comment at {_comment_post_coords}...")
     clicker.click(_comment_post_coords)
-    sleep(1.0)
+    time.sleep(1.0)
 
 
 def close_comments(clicker):
     """Tap above the comments sheet to dismiss it."""
     clicker.click((16000, 3000))
-    sleep(0.5)
+    time.sleep(0.5)
 
 
 def _cache_button_coords(screen):
@@ -214,7 +222,7 @@ def browse_reels(clicker, count=100):
         except Exception as e:
             print(f"ERROR: screen_state failed: {e}, skipping reel")
             next_reel(clicker)
-            sleep(random.uniform(0.3, 0.8))
+            time.sleep(random.uniform(0.3, 0.8))
             continue
 
         if is_ad(screen):
@@ -223,9 +231,9 @@ def browse_reels(clicker, count=100):
             btn = screen.find("close") or screen.find("back")
             if btn:
                 clicker.click(btn.center)
-                sleep(0.5)
+                time.sleep(0.5)
             next_reel(clicker)
-            sleep(random.uniform(0.3, 0.8))
+            time.sleep(random.uniform(0.3, 0.8))
             continue
 
         if not btn_coords:
@@ -234,29 +242,29 @@ def browse_reels(clicker, count=100):
         # Watch for a random duration (1.5-6s)
         watch_time = random.uniform(1.5, 6.0)
         print(f"Watching for {watch_time:.1f}s...")
-        sleep(watch_time)
+        time.sleep(watch_time)
 
         # ~25% chance to like
         if random.random() < 0.25 and "like" in btn_coords:
             like_reel(clicker, btn_coords["like"])
-            sleep(random.uniform(0.5, 1.2))
+            time.sleep(random.uniform(0.5, 1.2))
 
         # ~10% chance to follow
         if random.random() < 0.10 and "follow" in btn_coords:
             follow_account(clicker, btn_coords["follow"])
-            sleep(random.uniform(0.5, 1.0))
+            time.sleep(random.uniform(0.5, 1.0))
 
         # ~15% chance to interact with comments
         if random.random() < 0.15 and "comment" in btn_coords:
             open_comments(clicker, btn_coords["comment"])
             if random.random() < 0.5:
                 write_comment(clicker)
-                sleep(random.uniform(0.5, 1.0))
+                time.sleep(random.uniform(0.5, 1.0))
             close_comments(clicker)
 
         # Swipe to next reel, pause before next action
         next_reel(clicker)
-        sleep(random.uniform(0.3, 0.8))
+        time.sleep(random.uniform(0.3, 0.8))
 
 
 def main():

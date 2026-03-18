@@ -13,7 +13,7 @@ class Element:
     content: str
     interactivity: bool
     center: tuple
-    bbox: list
+    bbox: tuple
     location: str
 
     @property
@@ -39,7 +39,7 @@ class Element:
             content=d.get("content") or "",
             interactivity=bool(d.get("interactivity", False)),
             center=tuple(d.get("center", (0, 0))),
-            bbox=d.get("bbox", []),
+            bbox=tuple(d.get("bbox", ())),
             location=d.get("location", ""),
         )
 

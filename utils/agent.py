@@ -45,7 +45,10 @@ class Agent:
     def run(self, task: str) -> str:
         """Start a new agent task. Returns task_id and stores it internally."""
         result = _run_agent(self.device_id, task)
-        self.current_task_id = result["task_id"]
+        task_id = result.get("task_id")
+        if not task_id:
+            raise ValueError(f"API response missing 'task_id': {result}")
+        self.current_task_id = task_id
         return self.current_task_id
 
     def get_status(self, task_id: str | None = None) -> dict:
@@ -69,14 +72,19 @@ class Agent:
         self,
         task_id: str | None = None,
         interval: float = 1.0,
+        timeout: float = 300.0,
     ) -> str | None:
         """Poll task until completion, printing events to stdout."""
         tid = task_id or self.current_task_id
         if not tid:
             raise ValueError("No task_id -- call run() first or pass task_id")
 
+        deadline = time.time() + timeout
         seen_events = 0
         while True:
+            if time.time() > deadline:
+                raise TimeoutError(f"poll() exceeded {timeout}s for task {tid}")
+
             task = _get_agent_task(self.device_id, tid)
             events = task.get("events", [])
 
