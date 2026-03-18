@@ -1,5 +1,3 @@
-import time
-
 import requests
 
 from .environment import API_KEY, API_URL
@@ -95,23 +93,52 @@ def get_screen_state(device_id):
     return response.json()
 
 
-def find_element(screen_state, keyword, only_interactive=True):
-    """Find first element whose content contains keyword.
+def tap(device_id, x, y, duration=300):
+    """Move to coordinates and click in a single call.
 
     Args:
-        screen_state: Result of get_screen_state()
-        keyword: Text to search for (case-insensitive)
-        only_interactive: If True, skip non-tappable elements
-    Returns:
-        Element dict or None
+        device_id: Device ID
+        x: X coordinate
+        y: Y coordinate
+        duration: Click duration in milliseconds
     """
-    for el in screen_state.get("elements", []):
-        content = el.get("content") or ""
-        if keyword.lower() in content.lower():
-            if only_interactive and not el.get("interactivity"):
-                continue
-            return el
-    return None
+    payload = {"left": x, "top": y, "duration": duration}
+    response = session.post(f"{API_URL}/{device_id}/tap", json=payload)
+    result = response.json()
+    print(result)
+    return result
+
+
+def scroll(device_id, x, y, direction, distance=300, duration=500):
+    """Scroll in a direction at the given coordinates.
+
+    Args:
+        device_id: Device ID
+        x: X coordinate of scroll start
+        y: Y coordinate of scroll start
+        direction: "up" or "down"
+        distance: Scroll distance in pixels
+        duration: Scroll duration in milliseconds
+    """
+    payload = {"left": x, "top": y, "direction": direction, "distance": distance, "duration": duration}
+    response = session.post(f"{API_URL}/{device_id}/scroll", json=payload)
+    result = response.json()
+    print(result)
+    return result
+
+
+def get_status(device_id):
+    """Check device connection status.
+
+    Args:
+        device_id: Device ID
+    Returns:
+        dict with connection status info
+    """
+    response = session.get(f"{API_URL}/{device_id}/status")
+    result = response.json()
+    print(result)
+    return result
 
 
 def type_text(device_id, text):
@@ -133,98 +160,3 @@ def type_text(device_id, text):
     return result
 
 
-# --- Agent API ---
-
-def run_agent(device_id, task):
-    """Start an AI agent task on the device.
-
-    Args:
-        device_id: Device ID
-        task: Task instruction string
-
-    Returns:
-        dict with task_id, status, etc.
-    """
-    response = session.post(
-        f"{API_URL}/{device_id}/agent/run",
-        json={"task": task},
-        timeout=10,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def get_agent_task(device_id, task_id):
-    """Get agent task status and result.
-
-    Args:
-        device_id: Device ID
-        task_id: Task ID from run_agent()
-
-    Returns:
-        dict with status, result, events, etc.
-    """
-    response = session.get(
-        f"{API_URL}/{device_id}/agent/{task_id}",
-        timeout=10,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def cancel_agent_task(device_id, task_id):
-    """Cancel a running agent task.
-
-    Args:
-        device_id: Device ID
-        task_id: Task ID from run_agent()
-
-    Returns:
-        dict with updated task status
-    """
-    response = session.delete(
-        f"{API_URL}/{device_id}/agent/{task_id}",
-        timeout=10,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def poll_agent(device_id, task_id, callback=None):
-    """Poll agent task progress until completion.
-
-    Args:
-        device_id: Device ID
-        task_id: Task ID from run_agent()
-        callback: Optional function(event_data: dict) called for each new event.
-                  If None, prints events to stdout.
-    Returns:
-        Final task result string or None
-    """
-    seen_events = 0
-
-    while True:
-        task = get_agent_task(device_id, task_id)
-        events = task.get("events", [])
-
-        for event in events[seen_events:]:
-            if callback:
-                callback(event)
-            else:
-                step = event.get("step", "?")
-                max_steps = event.get("max_steps", "?")
-                action = event.get("action", "?")
-                result = event.get("result", "?")
-                print(f"[{step}/{max_steps}] {action} -> {result}")
-        seen_events = len(events)
-
-        status = task.get("status")
-        if status not in ("pending", "running"):
-            result = task.get("result")
-            if callback:
-                callback({"status": status, "result": result})
-            else:
-                print(f"\n--- Agent {status}: {result}")
-            return result
-
-        time.sleep(1)
