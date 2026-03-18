@@ -142,5 +142,3 @@ def type_text(device_id, text):
     result = response.json()
     print(result)
     return result
-
-
