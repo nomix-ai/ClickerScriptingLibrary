@@ -1,6 +1,4 @@
 import time
-from collections.abc import Callable
-
 import requests
 
 from .environment import API_KEY, API_URL
@@ -70,10 +68,9 @@ class Agent:
     def poll(
         self,
         task_id: str | None = None,
-        callback: Callable[[dict], None] | None = None,
         interval: float = 1.0,
     ) -> str | None:
-        """Poll task until completion, printing or calling back on events."""
+        """Poll task until completion, printing events to stdout."""
         tid = task_id or self.current_task_id
         if not tid:
             raise ValueError("No task_id -- call run() first or pass task_id")
@@ -84,32 +81,22 @@ class Agent:
             events = task.get("events", [])
 
             for event in events[seen_events:]:
-                if callback:
-                    callback(event)
-                else:
-                    step = event.get("step", "?")
-                    max_steps = event.get("max_steps", "?")
-                    action = event.get("action", "?")
-                    result = event.get("result", "?")
-                    print(f"[{step}/{max_steps}] {action} -> {result}")
+                step = event.get("step", "?")
+                max_steps = event.get("max_steps", "?")
+                action = event.get("action", "?")
+                result = event.get("result", "?")
+                print(f"[{step}/{max_steps}] {action} -> {result}")
             seen_events = len(events)
 
             status = task.get("status")
             if status not in ("pending", "running"):
                 result = task.get("result")
-                if callback:
-                    callback({"status": status, "result": result})
-                else:
-                    print(f"\n--- Agent {status}: {result}")
+                print(f"\n--- Agent {status}: {result}")
                 return result
 
             time.sleep(interval)
 
-    def run_and_wait(
-        self,
-        task: str,
-        callback: Callable[[dict], None] | None = None,
-    ) -> str | None:
+    def run_and_wait(self, task: str) -> str | None:
         """Convenience: run a task and poll until done."""
         self.run(task)
-        return self.poll(callback=callback)
+        return self.poll()

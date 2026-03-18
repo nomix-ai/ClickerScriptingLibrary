@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Self
 
-from .api_helper import get_screen_state as _get_screen_state
+from .api_helper import get_screen_state
 
 
 @dataclass(frozen=True)
@@ -84,5 +84,5 @@ class Screen:
 
 def get_screen(device_id: str) -> Screen:
     """Get current screen state as a Screen object."""
-    raw = _get_screen_state(device_id)
+    raw = get_screen_state(device_id)
     return Screen.from_dict(raw)
