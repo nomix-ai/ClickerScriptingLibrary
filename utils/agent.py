@@ -107,4 +107,9 @@ class Agent:
     def run_and_wait(self, task: str) -> str | None:
         """Convenience: run a task and poll until done."""
         self.run(task)
-        return self.poll()
+        try:
+            return self.poll()
+        except TimeoutError as e:
+            print(f"ERROR: {e}")
+            self.cancel()
+            return None
