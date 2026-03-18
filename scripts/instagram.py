@@ -236,20 +236,20 @@ def browse_reels(clicker, count=100):
         print(f"Watching for {watch_time:.1f}s...")
         sleep(watch_time)
 
-        # ~25% chance to like (TEST: 100%)
-        if random.random() < 1 and "like" in btn_coords:
+        # ~25% chance to like
+        if random.random() < 0.25 and "like" in btn_coords:
             like_reel(clicker, btn_coords["like"])
             sleep(random.uniform(0.5, 1.2))
 
-        # ~10% chance to follow (TEST: 100%)
-        if random.random() < 1 and "follow" in btn_coords:
+        # ~10% chance to follow
+        if random.random() < 0.10 and "follow" in btn_coords:
             follow_account(clicker, btn_coords["follow"])
             sleep(random.uniform(0.5, 1.0))
 
-        # ~15% chance to interact with comments (TEST: 100%)
-        if random.random() < 1 and "comment" in btn_coords:
+        # ~15% chance to interact with comments
+        if random.random() < 0.15 and "comment" in btn_coords:
             open_comments(clicker, btn_coords["comment"])
-            if random.random() < 1:
+            if random.random() < 0.5:
                 write_comment(clicker)
                 sleep(random.uniform(0.5, 1.0))
             close_comments(clicker)
