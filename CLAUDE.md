@@ -12,7 +12,7 @@ python3 -m scripts.instagram
 
 ```
 utils/
-  __init__.py        — re-exports all public API
+  __init__.py        — empty (import from submodules directly)
   clicker.py         — Clicker class (swipe, click, type)
   recognition.py     — Screen, Element, get_screen()
   actions.py         — high-level helpers (open_app, chance_tap, post_comment, etc.)
@@ -27,11 +27,14 @@ config.json          — API_URL, API_KEY, DEVICE_ID
 
 ## Imports
 
-All public symbols are re-exported from `utils`:
+Import directly from submodules:
 
 ```python
-from utils import (
-    Clicker, Agent, Screen, Element, get_screen, DEVICE_ID,
+from utils.clicker import Clicker
+from utils.agent import Agent
+from utils.recognition import Screen, Element, get_screen
+from utils.environment import DEVICE_ID
+from utils.actions import (
     open_app, swipe_feed, swipe_back, is_ad, chance_tap, post_comment,
     random_sleep, find_and_click,
 )
@@ -104,8 +107,8 @@ class Element:
     type: str             # "icon" | "button" | "text" | "input" | "image" | "toggle" | "tab" | "other"
     content: str          # text/label of the element
     interactivity: bool   # whether it's tappable
-    center: tuple         # (x, y) in HID coords
-    bbox: tuple           # (y_min, x_min, y_max, x_max) in HID coords
+    center: tuple[int, int]              # (x, y) in HID coords
+    bbox: tuple[int, int, int, int]      # (y_min, x_min, y_max, x_max) in HID coords
     location: str         # "status-bar" | "top-left" | "top-center" | "top-right" |
                           # "center" | "bottom-left" | "bottom-center" | "bottom-right" | "navigation-bar"
 
@@ -212,8 +215,10 @@ restart(device_id)                                          # POST /{id}/restart
 ```python
 from time import sleep
 
-from utils import (
-    Clicker, get_screen, DEVICE_ID,
+from utils.clicker import Clicker
+from utils.recognition import get_screen
+from utils.environment import DEVICE_ID
+from utils.actions import (
     open_app, swipe_feed, swipe_back, is_ad, chance_tap, random_sleep, find_and_click,
 )
 
@@ -251,4 +256,5 @@ if __name__ == "__main__":
 - **Error handling**: `get_screen()` returns `None` on error — just check `if not screen:`.
 - **Timing**: always add `random_sleep()` between interactions for human-like variance.
 - **`get_screen()` context**: always pass a descriptive string for debug logs (e.g., `"reel_5"`, `"open_reels"`).
+- **Screen reuse**: fetch once with `screen = get_screen(clicker, "ctx")`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.
 - **Reference implementation**: `scripts/instagram.py`.

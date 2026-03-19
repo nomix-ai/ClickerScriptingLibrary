@@ -1,8 +1,10 @@
 import random
 from time import sleep
 
-from utils import (
-    Clicker, get_screen, DEVICE_ID,
+from utils.clicker import Clicker
+from utils.recognition import get_screen
+from utils.environment import DEVICE_ID
+from utils.actions import (
     open_app, swipe_feed, swipe_back, post_comment, is_ad, chance_tap, random_sleep,
     find_and_click,
 )
