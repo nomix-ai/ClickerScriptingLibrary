@@ -1,13 +1,16 @@
+import time
+
 from .recognition import Screen, get_screen
 
 
 def open_app(clicker, device_id: str, app_name: str) -> bool:
     """Open any app via iOS Spotlight search."""
     print("Opening Spotlight...")
-    clicker.swipe((16000, 16000), down=8000, duration=300)
+    clicker.swipe((16000, 10000), down=8000, duration=300)
 
     print(f"Typing '{app_name}'...")
     clicker.type(app_name)
+    time.sleep(2)
 
     screen = get_screen(device_id, "spotlight_search")
     btn = screen.find(app_name)
@@ -16,6 +19,7 @@ def open_app(clicker, device_id: str, app_name: str) -> bool:
         return False
     print(f"Tapping {app_name} at ({btn.x}, {btn.y})...")
     clicker.click(btn.center)
+    time.sleep(3)
     return True
 
 

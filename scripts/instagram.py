@@ -68,18 +68,15 @@ def open_reels(clicker) -> bool:
         print(f"WARNING: Home tab not found, elements: {[e.content for e in screen.elements]}")
         return False
 
-    # Reels is the second interactive button after Home
-    count = 0
+    # Reels is the first interactive button after Home
     for el in screen.elements[home_idx + 1:]:
         if el.is_interactive:
-            count += 1
-            if count == 2:
-                print(f"Reels tab (2nd after Home) at ({el.x}, {el.y}), tapping...")
-                clicker.click(el.center)
-                time.sleep(1.5)
-                return True
+            print(f"Reels tab (after Home) at ({el.x}, {el.y}), tapping...")
+            clicker.click(el.center)
+            time.sleep(1.5)
+            return True
 
-    print("WARNING: Not enough interactive elements after Home")
+    print("WARNING: No interactive element found after Home")
     return False
 
 
@@ -150,7 +147,7 @@ def main():
     if not open_app(clicker, DEVICE_ID, "instagram"):
         return
 
-    time.sleep(1)
+    time.sleep(2)
 
     if not open_reels(clicker):
         return
