@@ -7,8 +7,7 @@ Usage:
 
 import sys
 
-from utils.agent import Agent
-from utils.environment import DEVICE_ID
+from utils import Agent, DEVICE_ID
 
 
 def main():

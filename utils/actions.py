@@ -1,6 +1,8 @@
 import random
 from time import sleep
 
+import requests
+
 from .clicker import Clicker
 from .recognition import Screen, get_screen
 
@@ -14,7 +16,11 @@ def open_app(clicker: Clicker, app_name: str) -> bool:
     clicker.type(app_name)
     sleep(2)
 
-    screen = get_screen(clicker.device_id, "spotlight_search")
+    try:
+        screen = get_screen(clicker.device_id, "spotlight_search")
+    except (requests.RequestException, TimeoutError) as e:
+        print(f"ERROR: get_screen failed in open_app: {e}")
+        return False
     if not screen.find_and_click(clicker, app_name):
         print(f"WARNING: '{app_name}' not found in Spotlight results")
         return False
@@ -57,8 +63,8 @@ def swipe_feed(clicker: Clicker) -> None:
     clicker.swipe((16383, 26213), up=6553, duration=100)
 
 
-def find_and_tap(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool:
-    """Get screen, find element by keywords, and tap it. Returns True if tapped."""
+def find_and_click(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool:
+    """Get screen, find element by keywords, and click it. Returns True if clicked."""
     screen = get_screen(clicker.device_id, context)
     return screen.find_and_click(clicker, *keywords, interactive_only=interactive_only)
 

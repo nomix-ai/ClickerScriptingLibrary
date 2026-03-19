@@ -67,7 +67,7 @@ class Screen:
         return None
 
     def find_and_click(self, clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool:
-        """Find element by keywords and tap it. Returns True if tapped."""
+        """Find element by keywords and click it. Returns True if clicked."""
         coords = self.find(*keywords, interactive_only=interactive_only)
         if not coords:
             return False

@@ -33,7 +33,7 @@ All public symbols are re-exported from `utils`:
 from utils import (
     Clicker, Agent, Screen, Element, get_screen, DEVICE_ID,
     open_app, swipe_feed, swipe_back, is_ad, chance_tap, post_comment,
-    random_sleep, find_and_tap,
+    random_sleep, find_and_click,
 )
 ```
 
@@ -119,7 +119,7 @@ class Element:
 open_app(clicker: Clicker, app_name: str) -> bool
 # Opens Spotlight, types app name, taps result. Returns False if not found.
 
-find_and_tap(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool
+find_and_click(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool
 # Get screen + find element + tap in one call. Returns False if not found.
 
 swipe_feed(clicker: Clicker) -> None
@@ -215,7 +215,7 @@ import requests
 
 from utils import (
     Clicker, get_screen, DEVICE_ID,
-    open_app, swipe_feed, swipe_back, is_ad, chance_tap, random_sleep, find_and_tap,
+    open_app, swipe_feed, swipe_back, is_ad, chance_tap, random_sleep, find_and_click,
 )
 
 
@@ -229,7 +229,7 @@ def main():
 
     for i in range(count):
         try:
-            screen = get_screen(DEVICE_ID, f"step_{i}")
+            screen = get_screen(clicker.device_id, f"step_{i}")
         except (requests.RequestException, TimeoutError) as e:
             print(f"ERROR: get_screen failed: {e}")
             continue
@@ -238,7 +238,7 @@ def main():
         # screen.contains("keyword") -> bool
         # is_ad(screen) -> bool
         # chance_tap(screen, clicker, "like", 0.25) -> bool
-        # find_and_tap(clicker, "button", context="step") -> bool
+        # find_and_click(clicker, "button", context="step") -> bool
         # swipe_back(clicker)
 
         random_sleep(0.5, 2.0)
