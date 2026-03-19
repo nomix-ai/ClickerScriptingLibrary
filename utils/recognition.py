@@ -104,7 +104,10 @@ def get_screen(device: "str | Clicker", context: str = "") -> Screen | None:
         start = time.monotonic()
         screen = Screen.from_dict(get_screen_state(device_id))
         elapsed = time.monotonic() - start
-        print(f"screen-state done in {elapsed:.1f}s | app={screen.app_name} | {screen.description} | {len(screen.elements)} elements")
+        print(
+            f"screen-state done in {elapsed:.1f}s | app={screen.app_name}"
+            f" | {screen.description} | {len(screen.elements)} elements"
+        )
         return screen
     except (requests.RequestException, TimeoutError) as e:
         print(f"ERROR: get_screen failed: {e}")

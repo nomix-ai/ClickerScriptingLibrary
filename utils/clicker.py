@@ -13,7 +13,11 @@ class Clicker:
         self.device_id = device_id
         self.current_coords: tuple[int, int] = (0, 0)
 
-    def swipe(self, coords: tuple[int, int], up: int = 0, down: int = 0, left: int = 0, right: int = 0, duration: int = 300):
+    def swipe(
+        self, coords: tuple[int, int],
+        up: int = 0, down: int = 0, left: int = 0, right: int = 0,
+        duration: int = 300,
+    ):
         """Swipe from coords in the specified direction.
 
         Args:
@@ -63,7 +67,7 @@ class Clicker:
 
     def type(self, text: str):
         """Type text on the device.
-        
+
         Args:
             text: Text string to type
         """

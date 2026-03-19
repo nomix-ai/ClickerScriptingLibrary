@@ -5,7 +5,7 @@ from utils.clicker import Clicker
 from utils.recognition import get_screen
 from utils.environment import DEVICE_ID
 from utils.actions import (
-    open_app, swipe_feed, swipe_back, post_comment, is_ad, chance_tap, random_sleep,
+    open_app, swipe_feed, post_comment, is_ad, chance_tap, random_sleep,
     find_and_click,
 )
 
@@ -51,12 +51,6 @@ def browse_reels(
         if not screen:
             swipe_feed(clicker)
             random_sleep(0.3, 0.8)
-            continue
-
-        if not screen.description.lower().startswith("a vertical video") and "reel" not in screen.description.lower():
-            print(f"[Not a reel] {screen.description}, swiping back...")
-            swipe_back(clicker)
-            sleep(1)
             continue
 
         if is_ad(screen):
