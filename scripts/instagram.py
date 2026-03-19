@@ -34,7 +34,7 @@ COMMENT_SUBMIT_KEYWORD = "send comment"
 
 
 def open_reels(clicker: Clicker) -> bool:
-    screen = get_screen(DEVICE_ID, "open_reels")
+    screen = get_screen(clicker.device_id, "open_reels")
 
     home_idx = None
     for idx, el in enumerate(screen.elements):
@@ -72,7 +72,7 @@ def browse_reels(
 
         sleep(1)
         try:
-            screen = get_screen(DEVICE_ID, f"reel_{i + 1}")
+            screen = get_screen(clicker.device_id, f"reel_{i + 1}")
         except (requests.RequestException, TimeoutError) as e:
             print(f"ERROR: get_screen failed: {e}, skipping reel")
             swipe_feed(clicker)
