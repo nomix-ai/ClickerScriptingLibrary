@@ -93,6 +93,9 @@ screen.find(*keywords: str, interactive_only: bool = True) -> tuple | None
 # Find first element whose content contains any keyword (case-insensitive).
 # Returns center coords (x, y) or None.
 
+screen.find_and_click(clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool
+# Find element and tap it. Returns True if found and tapped.
+
 screen.contains(*keywords: str) -> bool
 # Check if any keyword appears in description or any element content.
 ```

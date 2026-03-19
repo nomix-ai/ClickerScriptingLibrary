@@ -35,27 +35,11 @@ COMMENT_SUBMIT_KEYWORD = "send comment"
 
 def open_reels(clicker: Clicker) -> bool:
     screen = get_screen(clicker.device_id, "open_reels")
-
-    home_idx = None
-    for idx, el in enumerate(screen.elements):
-        if "home" in el.content.lower():
-            home_idx = idx
-            break
-
-    if home_idx is None:
-        print(f"WARNING: Home tab not found, elements: {[e.content for e in screen.elements]}")
+    if not screen.find_and_click(clicker, "reels"):
+        print(f"WARNING: Reels tab not found, elements: {[e.content for e in screen.elements]}")
         return False
-
-    # Reels is the first interactive button after Home
-    for el in screen.elements[home_idx + 1:]:
-        if el.is_interactive:
-            print(f"Reels tab (after Home) at {el.center}, tapping...")
-            clicker.click(el.center)
-            sleep(1.5)
-            return True
-
-    print("WARNING: No interactive element found after Home")
-    return False
+    sleep(1.5)
+    return True
 
 
 def browse_reels(
@@ -87,9 +71,7 @@ def browse_reels(
 
         if is_ad(screen):
             print("[Ad] Skipping...")
-            btn = screen.find("close", "back")
-            if btn:
-                clicker.click(btn)
+            if screen.find_and_click(clicker, "close", "back"):
                 sleep(0.5)
             swipe_feed(clicker)
             random_sleep(0.3, 0.8)

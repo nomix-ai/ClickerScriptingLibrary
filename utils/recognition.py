@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Self
 
 from .api_helper import get_screen_state
+from .clicker import Clicker
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,14 @@ class Screen:
                         continue
                     return el.center
         return None
+
+    def find_and_click(self, clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool:
+        """Find element by keywords and tap it. Returns True if tapped."""
+        coords = self.find(*keywords, interactive_only=interactive_only)
+        if not coords:
+            return False
+        clicker.click(coords)
+        return True
 
     def contains(self, *keywords: str) -> bool:
         """Check if any keyword appears in description or any element (substring)."""

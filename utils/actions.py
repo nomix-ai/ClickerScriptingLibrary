@@ -15,12 +15,9 @@ def open_app(clicker: Clicker, app_name: str) -> bool:
     sleep(2)
 
     screen = get_screen(clicker.device_id, "spotlight_search")
-    btn = screen.find(app_name)
-    if not btn:
+    if not screen.find_and_click(clicker, app_name):
         print(f"WARNING: '{app_name}' not found in Spotlight results")
         return False
-    print(f"Tapping {app_name} at {btn}...")
-    clicker.click(btn)
     sleep(3)
     return True
 
@@ -42,12 +39,7 @@ def chance_tap(screen: Screen, clicker: Clicker, name: str, chance: float) -> bo
     """Roll the dice and tap a button found on screen. Returns True if tapped."""
     if random.random() >= chance:
         return False
-    btn = screen.find(name)
-    if not btn:
-        return False
-    print(f"{name.capitalize()} at {btn}...")
-    clicker.click(btn)
-    return True
+    return screen.find_and_click(clicker, name)
 
 
 def random_sleep(min_s: float = 0.3, max_s: float = 0.8) -> None:
@@ -68,12 +60,7 @@ def swipe_feed(clicker: Clicker) -> None:
 def find_and_tap(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool:
     """Get screen, find element by keywords, and tap it. Returns True if tapped."""
     screen = get_screen(clicker.device_id, context)
-    coords = screen.find(*keywords, interactive_only=interactive_only)
-    if not coords:
-        print(f"WARNING: {keywords} not found")
-        return False
-    clicker.click(coords)
-    return True
+    return screen.find_and_click(clicker, *keywords, interactive_only=interactive_only)
 
 
 def post_comment(
