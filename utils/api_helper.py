@@ -141,3 +141,49 @@ def type_text(device_id, text):
     result = response.json()
     print(result)
     return result
+
+
+def run_agent(device_id, task):
+    """Start a new agent task.
+
+    Args:
+        device_id: Device ID
+        task: Task instruction string
+    """
+    response = session.post(
+        f"{API_URL}/{device_id}/agent/run",
+        json={"task": task},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_agent_task(device_id, task_id):
+    """Get agent task status.
+
+    Args:
+        device_id: Device ID
+        task_id: Task ID
+    """
+    response = session.get(
+        f"{API_URL}/{device_id}/agent/{task_id}",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def cancel_agent_task(device_id, task_id):
+    """Cancel a running agent task.
+
+    Args:
+        device_id: Device ID
+        task_id: Task ID
+    """
+    response = session.delete(
+        f"{API_URL}/{device_id}/agent/{task_id}",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
