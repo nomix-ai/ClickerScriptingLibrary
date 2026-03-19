@@ -4,18 +4,18 @@ from .api_helper import move, click, type_text
 class Clicker:
     """Tracks cursor position and provides convenient methods."""
 
-    def __init__(self, device_id):
+    def __init__(self, device_id: str):
         """Initialize mouse controller.
-        
+
         Args:
             device_id: Device ID
         """
         self.device_id = device_id
-        self.current_coords = (0, 0)
+        self.current_coords: tuple[int, int] = (0, 0)
 
-    def swipe(self, coords, up=0, down=0, left=0, right=0, duration=300):
+    def swipe(self, coords: tuple[int, int], up: int = 0, down: int = 0, left: int = 0, right: int = 0, duration: int = 300):
         """Swipe from coords in the specified direction.
-        
+
         Args:
             coords: Start coordinates tuple (x, y)
             up: Swipe up distance in pixels
@@ -40,7 +40,7 @@ class Clicker:
         self.current_coords = end_coords
         return result
 
-    def click(self, coords, duration=100):
+    def click(self, coords: tuple[int, int], duration: int = 100):
         """Move to coordinates and click.
 
         Args:
@@ -61,7 +61,7 @@ class Clicker:
         result = click(self.device_id, duration=duration)
         return result
 
-    def type(self, text):
+    def type(self, text: str):
         """Type text on the device.
         
         Args:

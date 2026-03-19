@@ -1,10 +1,11 @@
 import random
 from time import sleep
 
+from .clicker import Clicker
 from .recognition import Screen, get_screen
 
 
-def open_app(clicker, device_id: str, app_name: str) -> bool:
+def open_app(clicker: Clicker, app_name: str) -> bool:
     """Open any app via iOS Spotlight search."""
     print("Opening Spotlight...")
     clicker.swipe((16000, 10000), down=8000, duration=300)
@@ -13,7 +14,7 @@ def open_app(clicker, device_id: str, app_name: str) -> bool:
     clicker.type(app_name)
     sleep(2)
 
-    screen = get_screen(device_id, "spotlight_search")
+    screen = get_screen(clicker.device_id, "spotlight_search")
     btn = screen.find(app_name)
     if not btn:
         print(f"WARNING: '{app_name}' not found in Spotlight results")
@@ -37,7 +38,7 @@ def is_ad(screen: Screen) -> bool:
             or any(el.content.lower() == "ad" for el in screen.elements))
 
 
-def chance_tap(screen, clicker, name: str, chance: float) -> bool:
+def chance_tap(screen: Screen, clicker: Clicker, name: str, chance: float) -> bool:
     """Roll the dice and tap a button found on screen. Returns True if tapped."""
     if random.random() >= chance:
         return False
@@ -49,14 +50,13 @@ def chance_tap(screen, clicker, name: str, chance: float) -> bool:
     return True
 
 
-def swipe_feed(clicker) -> None:
+def swipe_feed(clicker: Clicker) -> None:
     """Swipe up to the next feed item."""
     clicker.swipe((16383, 26213), up=6553, duration=100)
 
 
 def post_comment(
-    clicker,
-    device_id: str,
+    clicker: Clicker,
     text: str,
     input_keywords: list[str],
     submit_keyword: str,
@@ -70,7 +70,7 @@ def post_comment(
         clicker.click(cached_coords["comment_submit"])
         return True
 
-    screen = get_screen(device_id, "comment_input")
+    screen = get_screen(clicker.device_id, "comment_input")
     input_coords = screen.find(*input_keywords, interactive_only=False)
     if not input_coords:
         print("WARNING: Comment input not found")
@@ -80,7 +80,7 @@ def post_comment(
     clicker.type(text)
     sleep(2)
 
-    screen = get_screen(device_id, "comment_submit")
+    screen = get_screen(clicker.device_id, "comment_submit")
     submit_coords = screen.find(submit_keyword, interactive_only=False)
     if not submit_coords:
         print(f"WARNING: Submit button not found, elements: {[e.content for e in screen.elements]}")

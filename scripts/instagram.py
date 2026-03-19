@@ -3,10 +3,7 @@ from time import sleep
 
 import requests
 
-from utils.actions import open_app, swipe_feed, post_comment, is_ad, chance_tap
-from utils.recognition import get_screen
-from utils.clicker import Clicker
-from utils.environment import DEVICE_ID
+from utils import Clicker, get_screen, DEVICE_ID, open_app, swipe_feed, post_comment, is_ad, chance_tap
 
 
 COMMENTS = [
@@ -33,7 +30,7 @@ COMMENT_INPUT_KEYWORDS = [
 COMMENT_SUBMIT_KEYWORD = "send comment"
 
 
-def open_reels(clicker) -> bool:
+def open_reels(clicker: Clicker) -> bool:
     screen = get_screen(DEVICE_ID, "open_reels")
 
     home_idx = None
@@ -59,7 +56,7 @@ def open_reels(clicker) -> bool:
 
 
 def browse_reels(
-    clicker,
+    clicker: Clicker,
     count: int = 100,
     like_chance: float = 0.25,
     follow_chance: float = 0.10,
@@ -110,7 +107,6 @@ def browse_reels(
             if random.random() < 0.5:
                 post_comment(
                     clicker,
-                    DEVICE_ID,
                     text=random.choice(COMMENTS),
                     input_keywords=COMMENT_INPUT_KEYWORDS,
                     submit_keyword=COMMENT_SUBMIT_KEYWORD,
@@ -129,7 +125,7 @@ def browse_reels(
 def main():
     clicker = Clicker(DEVICE_ID)
 
-    if not open_app(clicker, DEVICE_ID, "instagram"):
+    if not open_app(clicker, "instagram"):
         return
 
     sleep(2)
