@@ -37,7 +37,7 @@ class Element:
         return cls(
             idx=d.get("idx", 0),
             type=d.get("type", ""),
-            content=d.get("content") or "",
+            content=d.get("content", ""),
             interactivity=bool(d.get("interactivity", False)),
             center=tuple(d.get("center", (0, 0))),
             bbox=tuple(d.get("bbox", ())),

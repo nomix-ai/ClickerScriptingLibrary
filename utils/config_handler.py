@@ -25,6 +25,10 @@ class ConfigHandler:
         except FileNotFoundError:
             self.config = {}
             self.last_reload_time = time.time()
+        except json.JSONDecodeError as e:
+            print(f"WARNING: Invalid JSON in {self.config_path}: {e}")
+            self.config = {}
+            self.last_reload_time = time.time()
 
     def _check_reload(self) -> None:
         if time.time() - self.last_reload_time > self.reload_interval_seconds:

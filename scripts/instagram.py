@@ -1,6 +1,8 @@
 import random
 import time
 
+import requests
+
 from utils.actions import open_app, swipe_feed, post_comment, is_ad
 from utils.recognition import get_screen
 from utils.clicker import Clicker
@@ -28,7 +30,7 @@ COMMENT_INPUT_KEYWORDS = [
     "what do you think",
 ]
 
-COMMENT_SUBMIT_KEYWORDS = ["send comment", "post", "send"]
+COMMENT_SUBMIT_KEYWORDS = ["send comment"]
 
 
 def try_tap(screen, clicker, name: str, chance: float) -> bool:
@@ -83,7 +85,7 @@ def browse_reels(
         time.sleep(1)
         try:
             screen = get_screen(DEVICE_ID, f"reel_{i + 1}")
-        except Exception as e:
+        except (requests.RequestException, TimeoutError) as e:
             print(f"ERROR: get_screen failed: {e}, skipping reel")
             swipe_feed(clicker)
             time.sleep(random.uniform(0.3, 0.8))
@@ -118,7 +120,7 @@ def browse_reels(
         if try_tap(screen, clicker, "comment", comment_chance):
             time.sleep(2)
             if random.random() < 0.5:
-                posted = post_comment(
+                post_comment(
                     clicker,
                     DEVICE_ID,
                     text=random.choice(COMMENTS),
@@ -128,11 +130,9 @@ def browse_reels(
                 )
                 time.sleep(random.uniform(0.5, 1.0))
             else:
-                posted = False
                 time.sleep(random.uniform(1.0, 3.0))  # just browse comments
-            if posted:
-                clicker.click((16000, 7000))  # dismiss comments sheet
-                time.sleep(0.5)
+            clicker.click((16000, 7000))  # dismiss comments sheet
+            time.sleep(0.5)
 
         swipe_feed(clicker)
         time.sleep(random.uniform(0.3, 0.8))
