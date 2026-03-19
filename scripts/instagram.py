@@ -1,8 +1,6 @@
 import random
 from time import sleep
 
-import requests
-
 from utils import (
     Clicker, get_screen, DEVICE_ID,
     open_app, swipe_feed, swipe_back, post_comment, is_ad, chance_tap, random_sleep,
@@ -47,10 +45,8 @@ def browse_reels(
         print(f"--- Reel {i + 1}/{count} ---")
 
         sleep(1)
-        try:
-            screen = get_screen(clicker.device_id, f"reel_{i + 1}")
-        except (requests.RequestException, TimeoutError) as e:
-            print(f"ERROR: get_screen failed: {e}, skipping reel")
+        screen = get_screen(clicker, f"reel_{i + 1}")
+        if not screen:
             swipe_feed(clicker)
             random_sleep(0.3, 0.8)
             continue
@@ -71,13 +67,13 @@ def browse_reels(
 
         random_sleep(1.5, 6.0)
 
-        if chance_tap(screen, clicker, "like", like_chance):
+        if chance_tap(clicker, screen, "like", like_chance):
             random_sleep(0.5, 1.2)
 
-        if chance_tap(screen, clicker, "follow", follow_chance):
+        if chance_tap(clicker, screen, "follow", follow_chance):
             random_sleep(0.5, 1.0)
 
-        if chance_tap(screen, clicker, "comment", comment_chance):
+        if chance_tap(clicker, screen, "comment", comment_chance):
             sleep(2)
             if random.random() < 0.5:
                 post_comment(

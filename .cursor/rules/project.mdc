@@ -80,9 +80,10 @@ Under the hood `click` calls `POST /{device_id}/click` (duration-based press at 
 ### Screen recognition
 
 ```python
-screen = get_screen(device_id: str, context: str = "") -> Screen
+screen = get_screen(device: str | Clicker, context: str = "") -> Screen | None
 # Calls POST /{device_id}/screen-state. Timeout: 60s.
 # Uses AI vision to parse the current screen into structured elements.
+# Returns None on network/timeout errors (no try/except needed in scripts).
 
 screen.app_name: str           # e.g. "Instagram"
 screen.description: str        # natural language screen description
@@ -140,7 +141,7 @@ random_sleep(min_s: float = 0.3, max_s: float = 0.8) -> None
 is_ad(screen: Screen) -> bool
 # Returns True if screen contains ad indicators.
 
-chance_tap(screen: Screen, clicker: Clicker, name: str, chance: float) -> bool
+chance_tap(clicker: Clicker, screen: Screen, name: str, chance: float) -> bool
 # With probability `chance`, finds button `name` on screen and taps it.
 # Returns True if tapped.
 
@@ -217,8 +218,6 @@ restart(device_id)                                          # POST /{id}/restart
 ```python
 from time import sleep
 
-import requests
-
 from utils import (
     Clicker, get_screen, DEVICE_ID,
     open_app, swipe_feed, swipe_back, is_ad, chance_tap, random_sleep, find_and_click,
@@ -234,16 +233,14 @@ def main():
     sleep(2)
 
     for i in range(count):
-        try:
-            screen = get_screen(clicker.device_id, f"step_{i}")
-        except (requests.RequestException, TimeoutError) as e:
-            print(f"ERROR: get_screen failed: {e}")
+        screen = get_screen(clicker, f"step_{i}")
+        if not screen:
             continue
 
         # screen.find("button_name") -> (x, y) or None
         # screen.contains("keyword") -> bool
         # is_ad(screen) -> bool
-        # chance_tap(screen, clicker, "like", 0.25) -> bool
+        # chance_tap(clicker, screen, "like", 0.25) -> bool
         # find_and_click(clicker, "button", context="step") -> bool
         # swipe_back(clicker)
 
@@ -257,7 +254,7 @@ if __name__ == "__main__":
 ## Conventions
 
 - **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (get_screen, get_status, get_devices).
-- **Error handling**: wrap `get_screen()` in `try/except (requests.RequestException, TimeoutError)`.
+- **Error handling**: `get_screen()` returns `None` on error — just check `if not screen:`.
 - **Timing**: always add `random_sleep()` between interactions for human-like variance.
 - **`get_screen()` context**: always pass a descriptive string for debug logs (e.g., `"reel_5"`, `"open_reels"`).
 - **Reference implementation**: `scripts/instagram.py`.

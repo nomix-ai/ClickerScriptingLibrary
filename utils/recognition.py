@@ -2,6 +2,8 @@ import time
 from dataclasses import dataclass
 from typing import Self
 
+import requests
+
 from .api_helper import get_screen_state
 from .clicker import Clicker
 
@@ -94,11 +96,16 @@ class Screen:
         )
 
 
-def get_screen(device_id: str, context: str = "") -> Screen:
-    """Get current screen state as a Screen object."""
+def get_screen(device: "str | Clicker", context: str = "") -> Screen | None:
+    """Get current screen state. Returns None on error."""
+    device_id = device.device_id if isinstance(device, Clicker) else device
     print(f"screen-state request ({context})..." if context else "screen-state request...")
-    start = time.monotonic()
-    screen = Screen.from_dict(get_screen_state(device_id))
-    elapsed = time.monotonic() - start
-    print(f"screen-state done in {elapsed:.1f}s | app={screen.app_name} | {screen.description} | {len(screen.elements)} elements")
-    return screen
+    try:
+        start = time.monotonic()
+        screen = Screen.from_dict(get_screen_state(device_id))
+        elapsed = time.monotonic() - start
+        print(f"screen-state done in {elapsed:.1f}s | app={screen.app_name} | {screen.description} | {len(screen.elements)} elements")
+        return screen
+    except (requests.RequestException, TimeoutError) as e:
+        print(f"ERROR: get_screen failed: {e}")
+        return None

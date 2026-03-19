@@ -1,8 +1,6 @@
 import random
 from time import sleep
 
-import requests
-
 from .clicker import Clicker
 from .recognition import Screen, get_screen
 
@@ -16,12 +14,8 @@ def open_app(clicker: Clicker, app_name: str) -> bool:
     clicker.type(app_name)
     sleep(2)
 
-    try:
-        screen = get_screen(clicker.device_id, "spotlight_search")
-    except (requests.RequestException, TimeoutError) as e:
-        print(f"ERROR: get_screen failed in open_app: {e}")
-        return False
-    if not screen.find_and_click(clicker, app_name):
+    screen = get_screen(clicker, "spotlight_search")
+    if not screen or not screen.find_and_click(clicker, app_name):
         print(f"WARNING: '{app_name}' not found in Spotlight results")
         return False
     sleep(3)
@@ -41,7 +35,7 @@ def is_ad(screen: Screen) -> bool:
             or any(el.content.lower() == "ad" for el in screen.elements))
 
 
-def chance_tap(screen: Screen, clicker: Clicker, name: str, chance: float) -> bool:
+def chance_tap(clicker: Clicker, screen: Screen, name: str, chance: float) -> bool:
     """Roll the dice and tap a button found on screen. Returns True if tapped."""
     if random.random() >= chance:
         return False
@@ -65,7 +59,9 @@ def swipe_feed(clicker: Clicker) -> None:
 
 def find_and_click(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool:
     """Get screen, find element by keywords, and click it. Returns True if clicked."""
-    screen = get_screen(clicker.device_id, context)
+    screen = get_screen(clicker, context)
+    if not screen:
+        return False
     return screen.find_and_click(clicker, *keywords, interactive_only=interactive_only)
 
 
@@ -84,7 +80,9 @@ def post_comment(
         clicker.click(cached_coords["comment_submit"])
         return True
 
-    screen = get_screen(clicker.device_id, "comment_input")
+    screen = get_screen(clicker, "comment_input")
+    if not screen:
+        return False
     input_coords = screen.find(*input_keywords, interactive_only=False)
     if not input_coords:
         print("WARNING: Comment input not found")
@@ -94,7 +92,9 @@ def post_comment(
     clicker.type(text)
     sleep(2)
 
-    screen = get_screen(clicker.device_id, "comment_submit")
+    screen = get_screen(clicker, "comment_submit")
+    if not screen:
+        return False
     submit_coords = screen.find(submit_keyword, interactive_only=False)
     if not submit_coords:
         print(f"WARNING: Submit button not found, elements: {[e.content for e in screen.elements]}")
