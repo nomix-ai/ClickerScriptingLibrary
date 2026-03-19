@@ -64,6 +64,25 @@ class Screen:
                 return el
         return None
 
+    def find_any(self, keywords: list[str], *, interactive_only: bool = True) -> Element | None:
+        """Find first element matching any of the keywords."""
+        for kw in keywords:
+            el = self.find(kw, interactive_only=interactive_only)
+            if el:
+                return el
+        return None
+
+    def contains(self, keyword: str) -> bool:
+        """Check if keyword appears in description or any element (substring)."""
+        kw = keyword.lower()
+        if kw in self.description.lower():
+            return True
+        return any(kw in el.content.lower() for el in self.elements)
+
+    def contains_any(self, keywords: list[str]) -> bool:
+        """Check if any keyword appears anywhere on screen."""
+        return any(self.contains(kw) for kw in keywords)
+
     def find_all(self, keyword: str, *, interactive_only: bool = False) -> list[Element]:
         """Find all elements whose content contains keyword."""
         kw = keyword.lower()
