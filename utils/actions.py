@@ -17,22 +17,22 @@ def open_app(clicker, device_id: str, app_name: str) -> bool:
     if not btn:
         print(f"WARNING: '{app_name}' not found in Spotlight results")
         return False
-    print(f"Tapping {app_name} at ({btn.x}, {btn.y})...")
-    clicker.click(btn.center)
+    print(f"Tapping {app_name} at {btn}...")
+    clicker.click(btn)
     time.sleep(3)
     return True
 
 
-_AD_KEYWORDS = (
+_AD_KEYWORDS = [
     "advertising", "advertisement", "sponsored",
     "contact us", "shop now", "learn more",
     "install now", "send message", "get quote",
-)
+]
 
 
 def is_ad(screen: Screen) -> bool:
     """Return True if the current screen looks like an ad."""
-    return (screen.contains_any(_AD_KEYWORDS)
+    return (screen.contains(*_AD_KEYWORDS)
             or any(el.content.lower() == "ad" for el in screen.elements))
 
 
@@ -46,7 +46,7 @@ def post_comment(
     device_id: str,
     text: str,
     input_keywords: list[str],
-    submit_keywords: list[str],
+    submit_keyword: str,
     cached_coords: dict | None = None,
 ) -> bool:
     """Find a comment input field, type text, and submit."""
@@ -58,25 +58,25 @@ def post_comment(
         return True
 
     screen = get_screen(device_id, "comment_input")
-    input_el = screen.find_any(input_keywords, interactive_only=False)
-    if not input_el:
+    input_coords = screen.find(*input_keywords, interactive_only=False)
+    if not input_coords:
         print("WARNING: Comment input not found")
         return False
 
-    clicker.click(input_el.center)
+    clicker.click(input_coords)
     clicker.type(text)
     time.sleep(2)
 
     screen = get_screen(device_id, "comment_submit")
-    submit_el = screen.find_any(submit_keywords, interactive_only=False)
-    if not submit_el:
+    submit_coords = screen.find(submit_keyword, interactive_only=False)
+    if not submit_coords:
         print(f"WARNING: Submit button not found, elements: {[e.content for e in screen.elements]}")
         return False
 
     if cached_coords is not None:
-        cached_coords["comment_input"] = input_el.center
-        cached_coords["comment_submit"] = submit_el.center
-        print(f"Cached comment_input at {input_el.center}, comment_submit at {submit_el.center}")
+        cached_coords["comment_input"] = input_coords
+        cached_coords["comment_submit"] = submit_coords
+        print(f"Cached comment_input at {input_coords}, comment_submit at {submit_coords}")
 
-    clicker.click(submit_el.center)
+    clicker.click(submit_coords)
     return True

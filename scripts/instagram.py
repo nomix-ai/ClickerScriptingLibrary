@@ -30,7 +30,7 @@ COMMENT_INPUT_KEYWORDS = [
     "what do you think",
 ]
 
-COMMENT_SUBMIT_KEYWORDS = ["send comment"]
+COMMENT_SUBMIT_KEYWORD = "send comment"
 
 
 def try_tap(screen, clicker, name: str, chance: float) -> bool:
@@ -40,8 +40,8 @@ def try_tap(screen, clicker, name: str, chance: float) -> bool:
     btn = screen.find(name)
     if not btn:
         return False
-    print(f"{name.capitalize()} at {btn.center}...")
-    clicker.click(btn.center)
+    print(f"{name.capitalize()} at {btn}...")
+    clicker.click(btn)
     return True
 
 
@@ -61,7 +61,7 @@ def open_reels(clicker) -> bool:
     # Reels is the first interactive button after Home
     for el in screen.elements[home_idx + 1:]:
         if el.is_interactive:
-            print(f"Reels tab (after Home) at ({el.x}, {el.y}), tapping...")
+            print(f"Reels tab (after Home) at {el.center}, tapping...")
             clicker.click(el.center)
             time.sleep(1.5)
             return True
@@ -99,9 +99,9 @@ def browse_reels(
 
         if is_ad(screen):
             print("[Ad] Skipping...")
-            btn = screen.find("close") or screen.find("back")
+            btn = screen.find("close", "back")
             if btn:
-                clicker.click(btn.center)
+                clicker.click(btn)
                 time.sleep(0.5)
             swipe_feed(clicker)
             time.sleep(random.uniform(0.3, 0.8))
@@ -125,7 +125,7 @@ def browse_reels(
                     DEVICE_ID,
                     text=random.choice(COMMENTS),
                     input_keywords=COMMENT_INPUT_KEYWORDS,
-                    submit_keywords=COMMENT_SUBMIT_KEYWORDS,
+                    submit_keyword=COMMENT_SUBMIT_KEYWORD,
                     cached_coords=comment_coords,
                 )
                 time.sleep(random.uniform(0.5, 1.0))

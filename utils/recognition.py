@@ -54,43 +54,26 @@ class Screen:
     elements: list[Element]
     latency: float
 
-    def find(self, keyword: str, *, interactive_only: bool = True) -> Element | None:
-        """Find first element whose content contains keyword (case-insensitive)."""
-        kw = keyword.lower()
-        for el in self.elements:
-            if kw in el.content.lower():
-                if interactive_only and not el.is_interactive:
-                    continue
-                return el
-        return None
-
-    def find_any(self, keywords: list[str], *, interactive_only: bool = True) -> Element | None:
-        """Find first element matching any of the keywords."""
+    def find(self, *keywords: str, interactive_only: bool = True) -> tuple | None:
+        """Find first element matching keyword(s). Returns center coords."""
         for kw in keywords:
-            el = self.find(kw, interactive_only=interactive_only)
-            if el:
-                return el
+            kw_lower = kw.lower()
+            for el in self.elements:
+                if kw_lower in el.content.lower():
+                    if interactive_only and not el.is_interactive:
+                        continue
+                    return el.center
         return None
 
-    def contains(self, keyword: str) -> bool:
-        """Check if keyword appears in description or any element (substring)."""
-        kw = keyword.lower()
-        if kw in self.description.lower():
-            return True
-        return any(kw in el.content.lower() for el in self.elements)
-
-    def contains_any(self, keywords: list[str]) -> bool:
-        """Check if any keyword appears anywhere on screen."""
-        return any(self.contains(kw) for kw in keywords)
-
-    def find_all(self, keyword: str, *, interactive_only: bool = False) -> list[Element]:
-        """Find all elements whose content contains keyword."""
-        kw = keyword.lower()
-        return [
-            el for el in self.elements
-            if kw in el.content.lower()
-            and (not interactive_only or el.is_interactive)
-        ]
+    def contains(self, *keywords: str) -> bool:
+        """Check if any keyword appears in description or any element (substring)."""
+        for kw in keywords:
+            kw_lower = kw.lower()
+            if kw_lower in self.description.lower():
+                return True
+            if any(kw_lower in el.content.lower() for el in self.elements):
+                return True
+        return False
 
     @classmethod
     def from_dict(cls, d: dict) -> Self:
