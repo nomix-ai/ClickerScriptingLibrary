@@ -1,9 +1,9 @@
 import random
-import time
+from time import sleep
 
 import requests
 
-from utils.actions import open_app, swipe_feed, post_comment, is_ad
+from utils.actions import open_app, swipe_feed, post_comment, is_ad, chance_tap
 from utils.recognition import get_screen
 from utils.clicker import Clicker
 from utils.environment import DEVICE_ID
@@ -33,18 +33,6 @@ COMMENT_INPUT_KEYWORDS = [
 COMMENT_SUBMIT_KEYWORD = "send comment"
 
 
-def try_tap(screen, clicker, name: str, chance: float) -> bool:
-    """Roll the dice and tap a button found on screen. Returns True if tapped."""
-    if random.random() >= chance:
-        return False
-    btn = screen.find(name)
-    if not btn:
-        return False
-    print(f"{name.capitalize()} at {btn}...")
-    clicker.click(btn)
-    return True
-
-
 def open_reels(clicker) -> bool:
     screen = get_screen(DEVICE_ID, "open_reels")
 
@@ -63,7 +51,7 @@ def open_reels(clicker) -> bool:
         if el.is_interactive:
             print(f"Reels tab (after Home) at {el.center}, tapping...")
             clicker.click(el.center)
-            time.sleep(1.5)
+            sleep(1.5)
             return True
 
     print("WARNING: No interactive element found after Home")
@@ -82,19 +70,19 @@ def browse_reels(
     for i in range(count):
         print(f"--- Reel {i + 1}/{count} ---")
 
-        time.sleep(1)
+        sleep(1)
         try:
             screen = get_screen(DEVICE_ID, f"reel_{i + 1}")
         except (requests.RequestException, TimeoutError) as e:
             print(f"ERROR: get_screen failed: {e}, skipping reel")
             swipe_feed(clicker)
-            time.sleep(random.uniform(0.3, 0.8))
+            sleep(random.uniform(0.3, 0.8))
             continue
 
         if not screen.description.lower().startswith("a vertical video") and "reel" not in screen.description.lower():
             print(f"[Not a reel] {screen.description}, swiping back...")
             clicker.swipe((5000, 16000), right=20000, duration=300)
-            time.sleep(1)
+            sleep(1)
             continue
 
         if is_ad(screen):
@@ -102,23 +90,23 @@ def browse_reels(
             btn = screen.find("close", "back")
             if btn:
                 clicker.click(btn)
-                time.sleep(0.5)
+                sleep(0.5)
             swipe_feed(clicker)
-            time.sleep(random.uniform(0.3, 0.8))
+            sleep(random.uniform(0.3, 0.8))
             continue
 
         watch_time = random.uniform(1.5, 6.0)
         print(f"Watching for {watch_time:.1f}s...")
-        time.sleep(watch_time)
+        sleep(watch_time)
 
-        if try_tap(screen, clicker, "like", like_chance):
-            time.sleep(random.uniform(0.5, 1.2))
+        if chance_tap(screen, clicker, "like", like_chance):
+            sleep(random.uniform(0.5, 1.2))
 
-        if try_tap(screen, clicker, "follow", follow_chance):
-            time.sleep(random.uniform(0.5, 1.0))
+        if chance_tap(screen, clicker, "follow", follow_chance):
+            sleep(random.uniform(0.5, 1.0))
 
-        if try_tap(screen, clicker, "comment", comment_chance):
-            time.sleep(2)
+        if chance_tap(screen, clicker, "comment", comment_chance):
+            sleep(2)
             if random.random() < 0.5:
                 post_comment(
                     clicker,
@@ -128,14 +116,14 @@ def browse_reels(
                     submit_keyword=COMMENT_SUBMIT_KEYWORD,
                     cached_coords=comment_coords,
                 )
-                time.sleep(random.uniform(0.5, 1.0))
+                sleep(random.uniform(0.5, 1.0))
             else:
-                time.sleep(random.uniform(1.0, 3.0))  # just browse comments
+                sleep(random.uniform(1.0, 3.0))  # just browse comments
             clicker.click((16000, 7000))  # dismiss comments sheet
-            time.sleep(0.5)
+            sleep(0.5)
 
         swipe_feed(clicker)
-        time.sleep(random.uniform(0.3, 0.8))
+        sleep(random.uniform(0.3, 0.8))
 
 
 def main():
@@ -144,7 +132,7 @@ def main():
     if not open_app(clicker, DEVICE_ID, "instagram"):
         return
 
-    time.sleep(2)
+    sleep(2)
 
     if not open_reels(clicker):
         return

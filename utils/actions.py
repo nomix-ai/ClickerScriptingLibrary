@@ -1,4 +1,5 @@
-import time
+import random
+from time import sleep
 
 from .recognition import Screen, get_screen
 
@@ -10,7 +11,7 @@ def open_app(clicker, device_id: str, app_name: str) -> bool:
 
     print(f"Typing '{app_name}'...")
     clicker.type(app_name)
-    time.sleep(2)
+    sleep(2)
 
     screen = get_screen(device_id, "spotlight_search")
     btn = screen.find(app_name)
@@ -19,7 +20,7 @@ def open_app(clicker, device_id: str, app_name: str) -> bool:
         return False
     print(f"Tapping {app_name} at {btn}...")
     clicker.click(btn)
-    time.sleep(3)
+    sleep(3)
     return True
 
 
@@ -34,6 +35,18 @@ def is_ad(screen: Screen) -> bool:
     """Return True if the current screen looks like an ad."""
     return (screen.contains(*_AD_KEYWORDS)
             or any(el.content.lower() == "ad" for el in screen.elements))
+
+
+def chance_tap(screen, clicker, name: str, chance: float) -> bool:
+    """Roll the dice and tap a button found on screen. Returns True if tapped."""
+    if random.random() >= chance:
+        return False
+    btn = screen.find(name)
+    if not btn:
+        return False
+    print(f"{name.capitalize()} at {btn}...")
+    clicker.click(btn)
+    return True
 
 
 def swipe_feed(clicker) -> None:
@@ -53,7 +66,7 @@ def post_comment(
     if cached_coords and "comment_input" in cached_coords and "comment_submit" in cached_coords:
         clicker.click(cached_coords["comment_input"])
         clicker.type(text)
-        time.sleep(0.5)
+        sleep(0.5)
         clicker.click(cached_coords["comment_submit"])
         return True
 
@@ -65,7 +78,7 @@ def post_comment(
 
     clicker.click(input_coords)
     clicker.type(text)
-    time.sleep(2)
+    sleep(2)
 
     screen = get_screen(device_id, "comment_submit")
     submit_coords = screen.find(submit_keyword, interactive_only=False)
