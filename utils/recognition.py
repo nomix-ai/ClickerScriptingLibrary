@@ -14,8 +14,8 @@ class Element:
     type: str
     content: str
     interactivity: bool
-    center: tuple
-    bbox: tuple
+    center: tuple[int, int]
+    bbox: tuple[int, int, int, int]
     location: str
 
     @property

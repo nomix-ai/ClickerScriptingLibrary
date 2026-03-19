@@ -6,6 +6,7 @@ import requests
 from utils import (
     Clicker, get_screen, DEVICE_ID,
     open_app, swipe_feed, swipe_back, post_comment, is_ad, chance_tap, random_sleep,
+    find_and_click,
 )
 
 
@@ -31,15 +32,6 @@ COMMENT_INPUT_KEYWORDS = [
 ]
 
 COMMENT_SUBMIT_KEYWORD = "send comment"
-
-
-def open_reels(clicker: Clicker) -> bool:
-    screen = get_screen(clicker.device_id, "open_reels")
-    if not screen.find_and_click(clicker, "reels"):
-        print(f"WARNING: Reels tab not found, elements: {[e.content for e in screen.elements]}")
-        return False
-    sleep(1.5)
-    return True
 
 
 def browse_reels(
@@ -113,9 +105,10 @@ def main():
 
     sleep(2)
 
-    if not open_reels(clicker):
+    if not find_and_click(clicker, "reels", context="open_reels"):
         return
 
+    sleep(1.5)
     browse_reels(clicker, count=10)
 
 
