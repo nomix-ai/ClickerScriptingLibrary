@@ -3,7 +3,10 @@ from time import sleep
 
 import requests
 
-from utils import Clicker, get_screen, DEVICE_ID, open_app, swipe_feed, post_comment, is_ad, chance_tap
+from utils import (
+    Clicker, get_screen, DEVICE_ID,
+    open_app, swipe_feed, swipe_back, post_comment, is_ad, chance_tap, random_sleep,
+)
 
 
 COMMENTS = [
@@ -73,12 +76,12 @@ def browse_reels(
         except (requests.RequestException, TimeoutError) as e:
             print(f"ERROR: get_screen failed: {e}, skipping reel")
             swipe_feed(clicker)
-            sleep(random.uniform(0.3, 0.8))
+            random_sleep(0.3, 0.8)
             continue
 
         if not screen.description.lower().startswith("a vertical video") and "reel" not in screen.description.lower():
             print(f"[Not a reel] {screen.description}, swiping back...")
-            clicker.swipe((5000, 16000), right=20000, duration=300)
+            swipe_back(clicker)
             sleep(1)
             continue
 
@@ -89,18 +92,16 @@ def browse_reels(
                 clicker.click(btn)
                 sleep(0.5)
             swipe_feed(clicker)
-            sleep(random.uniform(0.3, 0.8))
+            random_sleep(0.3, 0.8)
             continue
 
-        watch_time = random.uniform(1.5, 6.0)
-        print(f"Watching for {watch_time:.1f}s...")
-        sleep(watch_time)
+        random_sleep(1.5, 6.0)
 
         if chance_tap(screen, clicker, "like", like_chance):
-            sleep(random.uniform(0.5, 1.2))
+            random_sleep(0.5, 1.2)
 
         if chance_tap(screen, clicker, "follow", follow_chance):
-            sleep(random.uniform(0.5, 1.0))
+            random_sleep(0.5, 1.0)
 
         if chance_tap(screen, clicker, "comment", comment_chance):
             sleep(2)
@@ -112,14 +113,14 @@ def browse_reels(
                     submit_keyword=COMMENT_SUBMIT_KEYWORD,
                     cached_coords=comment_coords,
                 )
-                sleep(random.uniform(0.5, 1.0))
+                random_sleep(0.5, 1.0)
             else:
-                sleep(random.uniform(1.0, 3.0))  # just browse comments
+                random_sleep(1.0, 3.0)  # just browse comments
             clicker.click((16000, 7000))  # dismiss comments sheet
             sleep(0.5)
 
         swipe_feed(clicker)
-        sleep(random.uniform(0.3, 0.8))
+        random_sleep(0.3, 0.8)
 
 
 def main():

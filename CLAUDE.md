@@ -32,7 +32,8 @@ All public symbols are re-exported from `utils`:
 ```python
 from utils import (
     Clicker, Agent, Screen, Element, get_screen, DEVICE_ID,
-    open_app, swipe_feed, is_ad, chance_tap, post_comment,
+    open_app, swipe_feed, swipe_back, is_ad, chance_tap, post_comment,
+    random_sleep, find_and_tap,
 )
 ```
 
@@ -115,8 +116,17 @@ class Element:
 open_app(clicker: Clicker, app_name: str) -> bool
 # Opens Spotlight, types app name, taps result. Returns False if not found.
 
+find_and_tap(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool
+# Get screen + find element + tap in one call. Returns False if not found.
+
 swipe_feed(clicker: Clicker) -> None
 # Swipe up to the next feed item (vertical scroll).
+
+swipe_back(clicker: Clicker) -> None
+# iOS swipe-back gesture (swipe right from left edge).
+
+random_sleep(min_s: float = 0.3, max_s: float = 0.8) -> None
+# Sleep for a random duration to simulate human behavior.
 
 is_ad(screen: Screen) -> bool
 # Returns True if screen contains ad indicators.
@@ -196,12 +206,14 @@ restart(device_id)                                          # POST /{id}/restart
 ## Script template
 
 ```python
-import random
 from time import sleep
 
 import requests
 
-from utils import Clicker, get_screen, DEVICE_ID, open_app, swipe_feed, is_ad, chance_tap
+from utils import (
+    Clicker, get_screen, DEVICE_ID,
+    open_app, swipe_feed, swipe_back, is_ad, chance_tap, random_sleep, find_and_tap,
+)
 
 
 def main():
@@ -223,8 +235,10 @@ def main():
         # screen.contains("keyword") -> bool
         # is_ad(screen) -> bool
         # chance_tap(screen, clicker, "like", 0.25) -> bool
+        # find_and_tap(clicker, "button", context="step") -> bool
+        # swipe_back(clicker)
 
-        sleep(random.uniform(0.5, 2.0))
+        random_sleep(0.5, 2.0)
 
 
 if __name__ == "__main__":
@@ -235,6 +249,6 @@ if __name__ == "__main__":
 
 - **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (get_screen, get_status, get_devices).
 - **Error handling**: wrap `get_screen()` in `try/except (requests.RequestException, TimeoutError)`.
-- **Timing**: always add `sleep()` between interactions. Use `random.uniform()` for human-like variance.
+- **Timing**: always add `random_sleep()` between interactions for human-like variance.
 - **`get_screen()` context**: always pass a descriptive string for debug logs (e.g., `"reel_5"`, `"open_reels"`).
 - **Reference implementation**: `scripts/instagram.py`.

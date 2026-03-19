@@ -50,9 +50,30 @@ def chance_tap(screen: Screen, clicker: Clicker, name: str, chance: float) -> bo
     return True
 
 
+def random_sleep(min_s: float = 0.3, max_s: float = 0.8) -> None:
+    """Sleep for a random duration to simulate human behavior."""
+    sleep(random.uniform(min_s, max_s))
+
+
+def swipe_back(clicker: Clicker) -> None:
+    """iOS swipe-back gesture (swipe right from left edge)."""
+    clicker.swipe((5000, 16000), right=20000, duration=300)
+
+
 def swipe_feed(clicker: Clicker) -> None:
     """Swipe up to the next feed item."""
     clicker.swipe((16383, 26213), up=6553, duration=100)
+
+
+def find_and_tap(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool:
+    """Get screen, find element by keywords, and tap it. Returns True if tapped."""
+    screen = get_screen(clicker.device_id, context)
+    coords = screen.find(*keywords, interactive_only=interactive_only)
+    if not coords:
+        print(f"WARNING: {keywords} not found")
+        return False
+    clicker.click(coords)
+    return True
 
 
 def post_comment(
