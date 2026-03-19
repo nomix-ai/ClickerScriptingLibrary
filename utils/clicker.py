@@ -24,16 +24,6 @@ class Clicker:
             right: Swipe right distance in pixels
             duration: Swipe duration in milliseconds
         """
-        # Move to initial position first
-        move(
-            self.device_id,
-            self.current_coords,
-            coords,
-            is_pressed=False,
-            duration=duration
-        )
-        self.current_coords = coords
-
         # Calculate end position and perform swipe
         start_x, start_y = coords
         end_x = start_x - left + right
@@ -50,7 +40,7 @@ class Clicker:
         self.current_coords = end_coords
         return result
 
-    def click(self, coords, duration=300):
+    def click(self, coords, duration=100):
         """Move to coordinates and click.
 
         Args:

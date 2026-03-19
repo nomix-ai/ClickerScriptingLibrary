@@ -28,30 +28,18 @@ COMMENT_INPUT_KEYWORDS = [
     "what do you think",
 ]
 
-COMMENT_SUBMIT_KEYWORDS = ["post", "send"]
+COMMENT_SUBMIT_KEYWORDS = ["send comment", "post", "send"]
 
 
-BUTTON_NAMES = ("like", "follow", "comment")
-
-
-def cache_buttons(screen) -> dict:
-    coords = {}
-    for name in BUTTON_NAMES:
-        btn = screen.find(name)
-        if btn:
-            coords[name] = btn.center
-            print(f"Cached {name} button at {btn.center}")
-        else:
-            print(f"WARNING: Button '{name}' not found in first reel")
-    return coords
-
-
-def maybe_act(clicker, btn_coords: dict, name: str, chance: float) -> bool:
-    """Roll the dice and tap a cached button if it exists. Returns True if tapped."""
-    if random.random() >= chance or name not in btn_coords:
+def try_tap(screen, clicker, name: str, chance: float) -> bool:
+    """Roll the dice and tap a button found on screen. Returns True if tapped."""
+    if random.random() >= chance:
         return False
-    print(f"{name.capitalize()} at {btn_coords[name]}...")
-    clicker.click(btn_coords[name])
+    btn = screen.find(name)
+    if not btn:
+        return False
+    print(f"{name.capitalize()} at {btn.center}...")
+    clicker.click(btn.center)
     return True
 
 
@@ -87,17 +75,24 @@ def browse_reels(
     follow_chance: float = 0.10,
     comment_chance: float = 0.15,
 ) -> None:
-    btn_coords = {}
+    comment_coords = {}
 
     for i in range(count):
         print(f"--- Reel {i + 1}/{count} ---")
 
+        time.sleep(1)
         try:
             screen = get_screen(DEVICE_ID, f"reel_{i + 1}")
         except Exception as e:
             print(f"ERROR: get_screen failed: {e}, skipping reel")
             swipe_feed(clicker)
             time.sleep(random.uniform(0.3, 0.8))
+            continue
+
+        if not screen.description.lower().startswith("a vertical video") and "reel" not in screen.description.lower():
+            print(f"[Not a reel] {screen.description}, swiping back...")
+            clicker.swipe((5000, 16000), right=20000, duration=300)
+            time.sleep(1)
             continue
 
         if is_ad(screen):
@@ -110,31 +105,28 @@ def browse_reels(
             time.sleep(random.uniform(0.3, 0.8))
             continue
 
-        if not btn_coords:
-            btn_coords = cache_buttons(screen)
-
         watch_time = random.uniform(1.5, 6.0)
         print(f"Watching for {watch_time:.1f}s...")
         time.sleep(watch_time)
 
-        if maybe_act(clicker, btn_coords, "like", like_chance):
+        if try_tap(screen, clicker, "like", like_chance):
             time.sleep(random.uniform(0.5, 1.2))
 
-        if maybe_act(clicker, btn_coords, "follow", follow_chance):
+        if try_tap(screen, clicker, "follow", follow_chance):
             time.sleep(random.uniform(0.5, 1.0))
 
-        if maybe_act(clicker, btn_coords, "comment", comment_chance):
-            time.sleep(1.5)
-            if random.random() < 0.5:
-                post_comment(
-                    clicker,
-                    DEVICE_ID,
-                    text=random.choice(COMMENTS),
-                    input_keywords=COMMENT_INPUT_KEYWORDS,
-                    submit_keywords=COMMENT_SUBMIT_KEYWORDS,
-                )
-                time.sleep(random.uniform(0.5, 1.0))
-            clicker.click((16000, 3000))  # dismiss comments sheet
+        if try_tap(screen, clicker, "comment", comment_chance):
+            time.sleep(2)
+            post_comment(
+                clicker,
+                DEVICE_ID,
+                text=random.choice(COMMENTS),
+                input_keywords=COMMENT_INPUT_KEYWORDS,
+                submit_keywords=COMMENT_SUBMIT_KEYWORDS,
+                cached_coords=comment_coords,
+            )
+            time.sleep(random.uniform(0.5, 1.0))
+            clicker.click((16000, 7000))  # dismiss comments sheet
             time.sleep(0.5)
 
         swipe_feed(clicker)
@@ -152,7 +144,7 @@ def main():
     if not open_reels(clicker):
         return
 
-    browse_reels(clicker, count=10)
+    browse_reels(clicker, count=10, like_chance=1.0, follow_chance=1.0, comment_chance=1.0)
 
 
 if __name__ == "__main__":

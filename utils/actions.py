@@ -47,8 +47,16 @@ def post_comment(
     text: str,
     input_keywords: list[str],
     submit_keywords: list[str],
+    cached_coords: dict | None = None,
 ) -> bool:
     """Find a comment input field, type text, and submit."""
+    if cached_coords and "comment_input" in cached_coords and "comment_submit" in cached_coords:
+        clicker.click(cached_coords["comment_input"])
+        clicker.type(text)
+        time.sleep(0.5)
+        clicker.click(cached_coords["comment_submit"])
+        return True
+
     screen = get_screen(device_id, "comment_input")
     input_el = screen.find_any(input_keywords, interactive_only=False)
     if not input_el:
@@ -57,12 +65,18 @@ def post_comment(
 
     clicker.click(input_el.center)
     clicker.type(text)
+    time.sleep(2)
 
     screen = get_screen(device_id, "comment_submit")
-    submit_el = screen.find_any(submit_keywords)
+    submit_el = screen.find_any(submit_keywords, interactive_only=False)
     if not submit_el:
-        print("WARNING: Submit button not found")
+        print(f"WARNING: Submit button not found, elements: {[e.content for e in screen.elements]}")
         return False
+
+    if cached_coords is not None:
+        cached_coords["comment_input"] = input_el.center
+        cached_coords["comment_submit"] = submit_el.center
+        print(f"Cached comment_input at {input_el.center}, comment_submit at {submit_el.center}")
 
     clicker.click(submit_el.center)
     return True
