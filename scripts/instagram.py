@@ -117,17 +117,22 @@ def browse_reels(
 
         if try_tap(screen, clicker, "comment", comment_chance):
             time.sleep(2)
-            post_comment(
-                clicker,
-                DEVICE_ID,
-                text=random.choice(COMMENTS),
-                input_keywords=COMMENT_INPUT_KEYWORDS,
-                submit_keywords=COMMENT_SUBMIT_KEYWORDS,
-                cached_coords=comment_coords,
-            )
-            time.sleep(random.uniform(0.5, 1.0))
-            clicker.click((16000, 7000))  # dismiss comments sheet
-            time.sleep(0.5)
+            if random.random() < 0.5:
+                posted = post_comment(
+                    clicker,
+                    DEVICE_ID,
+                    text=random.choice(COMMENTS),
+                    input_keywords=COMMENT_INPUT_KEYWORDS,
+                    submit_keywords=COMMENT_SUBMIT_KEYWORDS,
+                    cached_coords=comment_coords,
+                )
+                time.sleep(random.uniform(0.5, 1.0))
+            else:
+                posted = False
+                time.sleep(random.uniform(1.0, 3.0))  # just browse comments
+            if posted:
+                clicker.click((16000, 7000))  # dismiss comments sheet
+                time.sleep(0.5)
 
         swipe_feed(clicker)
         time.sleep(random.uniform(0.3, 0.8))
@@ -144,7 +149,7 @@ def main():
     if not open_reels(clicker):
         return
 
-    browse_reels(clicker, count=10, like_chance=1.0, follow_chance=1.0, comment_chance=1.0)
+    browse_reels(clicker, count=10)
 
 
 if __name__ == "__main__":

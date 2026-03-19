@@ -1,10 +1,7 @@
 import time
-import requests
 
-from .environment import API_KEY, API_URL
-
-session = requests.Session()
-session.headers.update({"X-API-Key": API_KEY})
+from .api_helper import session
+from .environment import API_URL
 
 
 def _run_agent(device_id, task):

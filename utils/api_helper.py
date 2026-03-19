@@ -93,7 +93,6 @@ def get_screen_state(device_id):
     return response.json()
 
 
-
 def scroll(device_id, x, y, direction, distance=300, duration=500):
     """Scroll in a direction at the given coordinates.
 
