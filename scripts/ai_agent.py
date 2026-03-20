@@ -2,7 +2,7 @@
 
 Usage:
     python -m scripts.ai_agent "Open Settings and enable Wi-Fi"
-    python -m scripts.ai_agent "Open Telegram and send hello to diary chat"
+    python -m scripts.ai_agent "Open Telegram and send hello to Dan"
 """
 
 import sys
