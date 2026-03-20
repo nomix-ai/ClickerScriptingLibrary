@@ -10,7 +10,7 @@ class Agent:
         self.device_id = device_id
         self.current_task_id: str | None = None
 
-    def run(self, task: str) -> str:
+    def execute(self, task: str) -> str:
         """Start a new agent task. Returns task_id and stores it internally."""
         result = run_agent(self.device_id, task)
         task_id = result.get("task_id")
@@ -23,14 +23,14 @@ class Agent:
         """Get task status. Uses current_task_id if none provided."""
         tid = task_id or self.current_task_id
         if not tid:
-            raise ValueError("No task_id -- call run() first or pass task_id")
+            raise ValueError("No task_id -- call execute() first or pass task_id")
         return get_agent_task(self.device_id, tid)
 
     def cancel(self, task_id: str | None = None) -> dict:
         """Cancel a running task."""
         tid = task_id or self.current_task_id
         if not tid:
-            raise ValueError("No task_id -- call run() first or pass task_id")
+            raise ValueError("No task_id -- call execute() first or pass task_id")
         result = cancel_agent_task(self.device_id, tid)
         if tid == self.current_task_id:
             self.current_task_id = None
@@ -45,7 +45,7 @@ class Agent:
         """Poll task until completion, printing events to stdout."""
         tid = task_id or self.current_task_id
         if not tid:
-            raise ValueError("No task_id -- call run() first or pass task_id")
+            raise ValueError("No task_id -- call execute() first or pass task_id")
 
         deadline = time.time() + timeout
         seen_events = 0
@@ -74,9 +74,9 @@ class Agent:
 
             time.sleep(interval)
 
-    def run_and_wait(self, task: str) -> str | None:
-        """Convenience: run a task and poll until done."""
-        self.run(task)
+    def run(self, task: str) -> str | None:
+        """Convenience: execute a task and poll until done."""
+        self.execute(task)
         try:
             return self.poll()
         except TimeoutError as e:

@@ -163,7 +163,7 @@ post_comment(
 ```python
 agent = Agent(device_id: str)
 
-agent.run(task: str) -> str
+agent.execute(task: str) -> str
 # Start a new autonomous task. Returns task_id.
 # Only one task per device at a time (409 if already running).
 
@@ -175,8 +175,8 @@ agent.cancel(task_id: str | None = None) -> dict
 agent.poll(task_id=None, interval: float = 1.0, timeout: float = 300.0) -> str | None
 # Poll until completion, printing step events. Returns result or None on timeout.
 
-agent.run_and_wait(task: str) -> str | None
-# Convenience: run + poll. Auto-cancels on timeout.
+agent.run(task: str) -> str | None
+# Convenience: execute + poll. Auto-cancels on timeout.
 ```
 
 Task statuses: `pending` → `running` → `completed` | `failed` | `cancelled`. Max 100 steps per task.
