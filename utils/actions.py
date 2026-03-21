@@ -9,6 +9,7 @@ def open_app(clicker: Clicker, app_name: str) -> bool:
     """Open any app via iOS Spotlight search."""
     print("Opening Spotlight...")
     clicker.swipe((16000, 10000), down=8000, duration=300)
+    sleep(0.5)
 
     print(f"Typing '{app_name}'...")
     clicker.type(app_name)
