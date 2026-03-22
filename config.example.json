@@ -1,3 +1,5 @@
 {
-  "API_KEY": "your-api-key"
+  "API_KEY": "your-api-key",
+  "DEVICE_ID": "device-id",
+  "API_URL": "https://panel.nomixclicker.com/clicker/v1"
 }

@@ -4,16 +4,18 @@ from .environment import API_KEY, API_URL
 
 # API reference: https://panel.nomixclicker.com/docs
 
-HEADERS = {"X-API-Key": API_KEY}
+session = requests.Session()
+session.headers.update({"X-API-Key": API_KEY})
 
 
 def get_devices():
     """Get list of connected devices.
-    
+
     Returns:
         List of device IDs
     """
-    response = requests.get(f"{API_URL}/devices", headers=HEADERS)
+    response = session.get(f"{API_URL}/devices")
+    response.raise_for_status()
     result = response.json()
     print(result)
     return result
@@ -21,30 +23,28 @@ def get_devices():
 
 def restart(device_id):
     """Restart device.
-    
+
     Args:
         device_id: Device ID
     """
-    response = requests.post(f"{API_URL}/{device_id}/restart", headers=HEADERS)
+    response = session.post(f"{API_URL}/{device_id}/restart")
     result = response.json()
     print(result)
     return result
 
 
 def click(device_id, duration=300):
-    """Click at specified coordinates.
+    """Click at the current cursor position.
 
     Args:
         device_id: Device ID
-        coords: Tuple of (x, y) coordinates
         duration: Click duration in milliseconds
     """
     payload = {
         "duration": duration
     }
-    response = requests.post(
+    response = session.post(
         f"{API_URL}/{device_id}/click",
-        headers=HEADERS,
         json=payload
     )
     result = response.json()
@@ -54,7 +54,7 @@ def click(device_id, duration=300):
 
 def move(device_id, start, end, is_pressed=False, duration=300):
     """Move mouse from start to end coordinates. Mouse released at end if pressed.
-    
+
     Args:
         device_id: Device ID
         start: Tuple of (x, y) start coordinates
@@ -72,11 +72,55 @@ def move(device_id, start, end, is_pressed=False, duration=300):
         "is_pressed": is_pressed,
         "duration": duration
     }
-    response = requests.post(
+    response = session.post(
         f"{API_URL}/{device_id}/move",
-        headers=HEADERS,
         json=payload
     )
+    result = response.json()
+    print(result)
+    return result
+
+
+def get_screen_state(device_id):
+    """Get current screen state with all UI elements.
+
+    Returns:
+        dict with app_name, screen_description, elements[]
+        Each element has: type, content, interactivity, center [x, y], bbox
+    """
+    response = session.post(f"{API_URL}/{device_id}/screen-state", timeout=60)
+    response.raise_for_status()
+    return response.json()
+
+
+def scroll(device_id, x, y, direction, distance=300, duration=500):
+    """Scroll in a direction at the given coordinates.
+
+    Args:
+        device_id: Device ID
+        x: X coordinate of scroll start
+        y: Y coordinate of scroll start
+        direction: "up" or "down"
+        distance: Scroll distance in pixels
+        duration: Scroll duration in milliseconds
+    """
+    payload = {"left": x, "top": y, "direction": direction, "distance": distance, "duration": duration}
+    response = session.post(f"{API_URL}/{device_id}/scroll", json=payload)
+    result = response.json()
+    print(result)
+    return result
+
+
+def get_status(device_id):
+    """Check device connection status.
+
+    Args:
+        device_id: Device ID
+    Returns:
+        dict with connection status info
+    """
+    response = session.get(f"{API_URL}/{device_id}/status")
+    response.raise_for_status()
     result = response.json()
     print(result)
     return result
@@ -84,19 +128,62 @@ def move(device_id, start, end, is_pressed=False, duration=300):
 
 def type_text(device_id, text):
     """Type text on the device.
-    
+
     Args:
         device_id: Device ID
         text: Text string to type (1-10000 characters)
     """
-    payload = {
-        "text": text
-    }
-    response = requests.post(
+    payload = {"text": text}
+    response = session.post(
         f"{API_URL}/{device_id}/keyboard/type",
-        headers=HEADERS,
         json=payload
     )
     result = response.json()
     print(result)
     return result
+
+
+def run_agent(device_id, task):
+    """Start a new agent task.
+
+    Args:
+        device_id: Device ID
+        task: Task instruction string
+    """
+    response = session.post(
+        f"{API_URL}/{device_id}/agent/run",
+        json={"task": task},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_agent_task(device_id, task_id):
+    """Get agent task status.
+
+    Args:
+        device_id: Device ID
+        task_id: Task ID
+    """
+    response = session.get(
+        f"{API_URL}/{device_id}/agent/{task_id}",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def cancel_agent_task(device_id, task_id):
+    """Cancel a running agent task.
+
+    Args:
+        device_id: Device ID
+        task_id: Task ID
+    """
+    response = session.delete(
+        f"{API_URL}/{device_id}/agent/{task_id}",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
