@@ -15,7 +15,7 @@ def open_app(clicker: Clicker, app_name: str) -> bool:
     clicker.type(app_name)
     sleep(2)
 
-    screen = get_screen(clicker, "spotlight_search")
+    screen = get_screen(clicker)
     if not screen or not screen.find_and_click(clicker, app_name):
         print(f"WARNING: '{app_name}' not found in Spotlight results")
         return False
@@ -58,9 +58,9 @@ def swipe_feed(clicker: Clicker) -> None:
     clicker.swipe((16383, 26213), up=6553, duration=100)
 
 
-def find_and_click(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool:
+def find_and_click(clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool:
     """Get screen, find element by keywords, and click it. Returns True if clicked."""
-    screen = get_screen(clicker, context)
+    screen = get_screen(clicker)
     if not screen:
         return False
     return screen.find_and_click(clicker, *keywords, interactive_only=interactive_only)
@@ -81,7 +81,7 @@ def post_comment(
         clicker.click(cached_coords["comment_submit"])
         return True
 
-    screen = get_screen(clicker, "comment_input")
+    screen = get_screen(clicker)
     if not screen:
         return False
     input_coords = screen.find(*input_keywords, interactive_only=False)
@@ -93,7 +93,7 @@ def post_comment(
     clicker.type(text)
     sleep(2)
 
-    screen = get_screen(clicker, "comment_submit")
+    screen = get_screen(clicker)
     if not screen:
         return False
     submit_coords = screen.find(submit_keyword, interactive_only=False)

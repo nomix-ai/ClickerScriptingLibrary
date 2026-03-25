@@ -47,7 +47,7 @@ def browse_reels(
         print(f"--- Reel {i + 1}/{count} ---")
 
         sleep(1)
-        screen = get_screen(clicker, f"reel_{i + 1}")
+        screen = get_screen(clicker)
         if not screen:
             swipe_feed(clicker)
             random_sleep(0.3, 0.8)

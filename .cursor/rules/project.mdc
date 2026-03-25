@@ -83,7 +83,7 @@ Under the hood `click` calls `POST /{device_id}/click` (duration-based press at 
 ### Screen recognition
 
 ```python
-screen = get_screen(device: str | Clicker, context: str = "") -> Screen | None
+screen = get_screen(device: str | Clicker) -> Screen | None
 # Calls POST /{device_id}/screen-state. Timeout: 60s.
 # Uses AI vision to parse the current screen into structured elements.
 # Returns None on network/timeout errors (no try/except needed in scripts).
@@ -129,7 +129,7 @@ class Element:
 open_app(clicker: Clicker, app_name: str) -> bool
 # Opens Spotlight, types app name, taps result. Returns False if not found.
 
-find_and_click(clicker: Clicker, *keywords: str, context: str = "", interactive_only: bool = True) -> bool
+find_and_click(clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool
 # Get screen + find element + tap in one call. Returns False if not found.
 
 swipe_feed(clicker: Clicker) -> None
@@ -238,7 +238,7 @@ def main():
     sleep(2)
 
     for i in range(count):
-        screen = get_screen(clicker, f"step_{i}")
+        screen = get_screen(clicker)
         if not screen:
             continue
 
@@ -246,7 +246,7 @@ def main():
         # screen.contains("keyword") -> bool
         # is_ad(screen) -> bool
         # chance_tap(clicker, screen, "like", 0.25) -> bool
-        # find_and_click(clicker, "button", context="step") -> bool
+        # find_and_click(clicker, "button") -> bool
         # swipe_back(clicker)
 
         random_sleep(0.5, 2.0)
@@ -261,6 +261,5 @@ if __name__ == "__main__":
 - **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (get_screen, get_status, get_devices).
 - **Error handling**: `get_screen()` returns `None` on error — just check `if not screen:`.
 - **Timing**: always add `random_sleep()` between interactions for human-like variance.
-- **`get_screen()` context**: always pass a descriptive string for debug logs (e.g., `"reel_5"`, `"open_reels"`).
-- **Screen reuse**: fetch once with `screen = get_screen(clicker, "ctx")`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.
+- **Screen reuse**: fetch once with `screen = get_screen(clicker)`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.
 - **Reference implementation**: `scripts/instagram.py`.
