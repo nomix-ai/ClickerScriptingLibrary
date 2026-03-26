@@ -76,17 +76,14 @@ def browse_reels(
 
         if chance_tap(clicker, screen, "comment", comment_chance):
             sleep(2)
-            if random.random() < 0.5:
-                post_comment(
-                    clicker,
-                    text=random.choice(COMMENTS),
-                    input_keywords=COMMENT_INPUT_KEYWORDS,
-                    submit_keyword=COMMENT_SUBMIT_KEYWORD,
-                    cached_coords=comment_coords,
-                )
-                random_sleep(0.5, 1.0)
-            else:
-                random_sleep(1.0, 3.0)  # just browse comments
+            post_comment(
+                clicker,
+                text=random.choice(COMMENTS),
+                input_keywords=COMMENT_INPUT_KEYWORDS,
+                submit_keyword=COMMENT_SUBMIT_KEYWORD,
+                cached_coords=comment_coords,
+            )
+            random_sleep(0.5, 1.0)
             clicker.click((16000, 7000))  # dismiss comments sheet
             sleep(0.5)
 
