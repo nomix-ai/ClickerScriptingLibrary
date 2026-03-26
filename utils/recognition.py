@@ -96,10 +96,10 @@ class Screen:
         )
 
 
-def get_screen(device: "str | Clicker", context: str = "") -> Screen | None:
+def get_screen(device: "str | Clicker") -> Screen | None:
     """Get current screen state. Returns None on error."""
     device_id = device.device_id if isinstance(device, Clicker) else device
-    print(f"screen-state request ({context})..." if context else "screen-state request...")
+    print("screen-state request...")
     try:
         start = time.monotonic()
         screen = Screen.from_dict(get_screen_state(device_id))
