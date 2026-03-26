@@ -96,19 +96,19 @@ class Screen:
         )
 
 
-def get_screen(device: "str | Clicker") -> Screen | None:
+def parse_screen(device: "str | Clicker") -> Screen | None:
     """Get current screen state. Returns None on error."""
     device_id = device.device_id if isinstance(device, Clicker) else device
-    print("screen-state request...")
+    print("Parsing screen...")
     try:
         start = time.monotonic()
         screen = Screen.from_dict(get_screen_state(device_id))
         elapsed = time.monotonic() - start
         print(
-            f"screen-state done in {elapsed:.1f}s | app={screen.app_name}"
+            f"Parsing done in {elapsed:.1f}s | app={screen.app_name}"
             f" | {screen.description} | {len(screen.elements)} elements"
         )
         return screen
     except (requests.RequestException, TimeoutError) as e:
-        print(f"ERROR: get_screen failed: {e}")
+        print(f"ERROR: parse_screen failed: {e}")
         return None

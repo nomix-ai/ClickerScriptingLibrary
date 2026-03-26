@@ -20,7 +20,7 @@ python3 -m scripts.instagram
 utils/
   __init__.py        — empty (import from submodules directly)
   clicker.py         — Clicker class (swipe, click, type)
-  recognition.py     — Screen, Element, get_screen()
+  recognition.py     — Screen, Element, parse_screen()
   actions.py         — high-level helpers (open_app, chance_tap, post_comment, etc.)
   agent.py           — Agent class (autonomous AI task runner)
   api_helper.py      — low-level HTTP calls to Nomix API (don't use directly)
@@ -38,7 +38,7 @@ Import directly from submodules:
 ```python
 from utils.clicker import Clicker
 from utils.agent import Agent
-from utils.recognition import Screen, Element, get_screen
+from utils.recognition import Screen, Element, parse_screen
 from utils.environment import DEVICE_ID
 from utils.actions import (
     open_app, swipe_feed, swipe_back, is_ad, chance_tap, post_comment,
@@ -83,7 +83,7 @@ Under the hood `click` calls `POST /{device_id}/click` (duration-based press at 
 ### Screen recognition
 
 ```python
-screen = get_screen(device: str | Clicker) -> Screen | None
+screen = parse_screen(device: str | Clicker) -> Screen | None
 # Calls POST /{device_id}/screen-state. Timeout: 60s.
 # Uses AI vision to parse the current screen into structured elements.
 # Returns None on network/timeout errors (no try/except needed in scripts).
@@ -222,7 +222,7 @@ restart(device_id)                                          # POST /{id}/restart
 from time import sleep
 
 from utils.clicker import Clicker
-from utils.recognition import get_screen
+from utils.recognition import parse_screen
 from utils.environment import DEVICE_ID
 from utils.actions import (
     open_app, swipe_feed, swipe_back, is_ad, chance_tap, random_sleep, find_and_click,
@@ -238,7 +238,7 @@ def main():
     sleep(2)
 
     for i in range(count):
-        screen = get_screen(clicker)
+        screen = parse_screen(clicker)
         if not screen:
             continue
 
@@ -258,8 +258,8 @@ if __name__ == "__main__":
 
 ## Conventions
 
-- **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (get_screen, get_status, get_devices).
-- **Error handling**: `get_screen()` returns `None` on error — just check `if not screen:`.
+- **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (parse_screen, get_status, get_devices).
+- **Error handling**: `parse_screen()` returns `None` on error — just check `if not screen:`.
 - **Timing**: always add `random_sleep()` between interactions for human-like variance.
-- **Screen reuse**: fetch once with `screen = get_screen(clicker)`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.
+- **Screen reuse**: fetch once with `screen = parse_screen(clicker)`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.
 - **Reference implementation**: `scripts/instagram.py`.
