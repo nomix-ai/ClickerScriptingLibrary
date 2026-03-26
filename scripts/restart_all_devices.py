@@ -1,3 +1,9 @@
+"""Restart all devices associated with the account.
+
+Usage:
+    python3 -m scripts.restart_all_devices
+"""
+
 from utils.api_helper import get_devices, restart
 
 

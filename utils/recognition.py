@@ -1,6 +1,5 @@
 import time
 from dataclasses import dataclass
-from typing import Self
 
 import requests
 
@@ -36,7 +35,7 @@ class Element:
         return f"[{self.type}] {self.content} @ {self.center}"
 
     @classmethod
-    def from_dict(cls, d: dict) -> Self:
+    def from_dict(cls, d: dict) -> "Element":
         return cls(
             idx=d.get("idx", 0),
             type=d.get("type", ""),
@@ -87,7 +86,7 @@ class Screen:
         return False
 
     @classmethod
-    def from_dict(cls, d: dict) -> Self:
+    def from_dict(cls, d: dict) -> "Screen":
         return cls(
             app_name=d.get("app_name", ""),
             description=d.get("screen_description", ""),

@@ -1,3 +1,9 @@
+"""Toggle airplane mode on and off on iPhone 12.
+
+Usage:
+    python3 -m scripts.airplane-mode-iphone-12
+"""
+
 from time import sleep
 
 from utils.clicker import Clicker

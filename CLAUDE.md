@@ -5,24 +5,24 @@ iOS device automation via Nomix Clicker API. Scripts simulate touch input and us
 ## Running scripts
 
 ```bash
-python3 -m scripts.instagram
+python3 -m scripts.instagram-warmup
 ```
 
 ## Project structure
 
 ```
 utils/
-  __init__.py        — empty (import from submodules directly)
-  clicker.py         — Clicker class (swipe, click, type)
-  recognition.py     — Screen, Element, parse_screen()
-  actions.py         — high-level helpers (open_app, chance_tap, post_comment, etc.)
-  agent.py           — Agent class (autonomous AI task runner)
-  api_helper.py      — low-level HTTP calls to Nomix API (don't use directly)
-  environment.py     — config values (API_URL, API_KEY, DEVICE_ID)
-  config_handler.py  — config.json loader with auto-reload every 300s
+  __init__.py          — empty (import from submodules directly)
+  clicker.py           — Clicker class (swipe, click, type)
+  recognition.py       — Screen, Element, parse_screen()
+  actions.py           — high-level helpers (open_app, chance_tap, post_comment, etc.)
+  agent.py             — Agent class (autonomous AI task runner)
+  api_helper.py        — low-level HTTP calls to Nomix API (don't use directly)
+  environment.py       — config values (API_URL, API_KEY, DEVICE_ID)
+  config_handler.py    — config.json loader with auto-reload every 300s
 scripts/
-  instagram.py       — reference implementation
-config.json          — API_URL, API_KEY, DEVICE_ID
+  instagram-warmup.py  — reference implementation
+config.json            — API_URL, API_KEY, DEVICE_ID
 ```
 
 ## Imports
@@ -256,4 +256,4 @@ if __name__ == "__main__":
 - **Error handling**: `parse_screen()` returns `None` on error — just check `if not screen:`.
 - **Timing**: always add `random_sleep()` between interactions for human-like variance.
 - **Screen reuse**: fetch once with `screen = parse_screen(clicker)`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.
-- **Reference implementation**: `scripts/instagram.py`.
+- **Reference implementation**: `scripts/instagram-warmup.py`.

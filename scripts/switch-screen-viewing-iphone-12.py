@@ -1,3 +1,9 @@
+"""Toggle Clicker screen viewing on and off via the NMX Viewer app on iPhone 12.
+
+Usage:
+    python3 -m scripts.switch-screen-viewing-iphone-12
+"""
+
 from utils.clicker import Clicker
 from utils.environment import DEVICE_ID
 

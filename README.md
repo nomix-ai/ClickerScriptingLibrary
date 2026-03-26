@@ -40,6 +40,7 @@ Manual control of iPhones will work out-of-the-box, no setup needed.
 
 The Library is designed to be easily extendable. Here are the scripts provided as examples (more will be added):
 
+- [**instagram-warmup.py**](scripts/instagram-warmup.py) - Scrolls Instagram Reels, liking, following, and commenting with configurable probabilities.
 - [**restart_all_devices.py**](scripts/restart_all_devices.py) - Restarts all devices associated with your account.
 - [**airplane-mode-iphone-12.py**](scripts/airplane-mode-iphone-12.py) - Toggles airplane mode on and off on iPhone 12.
 - [**switch-screen-viewing-iphone-12.py**](scripts/switch-screen-viewing-iphone-12.py) - Turns on/off Clicker screen viewing.
