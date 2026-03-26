@@ -8,7 +8,7 @@ import random
 from time import sleep
 
 from utils.actions import (
-    open_app, swipe_feed, post_comment, is_ad, chance_tap, random_sleep,
+    open_app, close_app, swipe_feed, post_comment, is_ad, chance_tap, random_sleep,
     find_and_click,
 )
 from utils.clicker import Clicker
@@ -106,7 +106,8 @@ def main():
         return
 
     sleep(1.5)
-    browse_reels(clicker, count=10)
+    browse_reels(clicker, count=1)
+    close_app(clicker)
 
 
 if __name__ == "__main__":

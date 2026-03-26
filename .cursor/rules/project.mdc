@@ -129,6 +129,9 @@ class Element:
 open_app(clicker: Clicker, app_name: str) -> bool
 # Opens Spotlight, types app name, taps result. Returns False if not found.
 
+close_app(clicker: Clicker) -> None
+# Opens app switcher, dismisses the last app card, taps home.
+
 find_and_click(clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool
 # Get screen + find element + tap in one call. Returns False if not found.
 

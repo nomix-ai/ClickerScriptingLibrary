@@ -23,6 +23,19 @@ def open_app(clicker: Clicker, app_name: str) -> bool:
     return True
 
 
+def close_app(clicker: Clicker) -> None:
+    """Open app switcher, dismiss the last app, then tap home."""
+    print("Closing app...")
+    # Slow swipe up from bottom edge to open app switcher
+    clicker.swipe((16384, 32767), up=4767, duration=1000)
+    sleep(5)
+    # Swipe up on the last app card to dismiss it
+    clicker.swipe((26500, 20000), up=10000, duration=300)
+    sleep(5)
+    # Tap home area to exit app switcher
+    clicker.click((16384, 30000), duration=100)
+
+
 _AD_KEYWORDS = [
     "advertising", "advertisement", "sponsored",
     "contact us", "shop now", "learn more",
