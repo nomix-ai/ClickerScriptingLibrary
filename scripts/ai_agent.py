@@ -11,12 +11,15 @@ from utils.agent import Agent
 from utils.environment import DEVICE_ID
 
 
-def main():
-    if len(sys.argv) < 2:
-        print('Usage: python -m scripts.ai_agent "your task instruction"')
-        sys.exit(1)
+DEFAULT_TASK = """
+Open Reddit, find a sub about surfing, swipe a few posts.
+Then open some post, upvote it, and write a hilarious comment relevant to
+the content. Then close the app. 
+""".strip()
 
-    task = " ".join(sys.argv[1:])
+
+def main():
+    task = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else DEFAULT_TASK
     print(f"Device: {DEVICE_ID}")
     print(f"Task: {task}\n")
 
