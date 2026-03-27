@@ -1,4 +1,4 @@
-"""Scroll Instagram Reels with configurable like, follow, and comment probabilities.
+"""Scroll Instagram Reels with configurable like and comment probabilities.
 
 Usage:
     python3 -m scripts.instagram-warmup
@@ -43,7 +43,6 @@ def browse_reels(
         clicker: Clicker,
         count: int,
         like_chance: float,
-        follow_chance: float,
         comment_chance: float,
 ) -> None:
     comment_coords = {}
@@ -70,9 +69,6 @@ def browse_reels(
 
         if chance_tap(clicker, screen, "like", like_chance):
             random_sleep(0.5, 1.2)
-
-        if chance_tap(clicker, screen, "follow", follow_chance):
-            random_sleep(0.5, 1.0)
 
         if chance_tap(clicker, screen, "comment", comment_chance):
             sleep(2)
@@ -126,7 +122,6 @@ def main():
         clicker,
         count=3,
         like_chance=0.5,
-        follow_chance=0.01,
         comment_chance=0.3
     )
 
