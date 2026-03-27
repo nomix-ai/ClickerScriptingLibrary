@@ -79,9 +79,6 @@ def browse_reels(
                 submit_keyword=COMMENT_SUBMIT_KEYWORD,
                 cached_coords=comment_coords,
             )
-            random_sleep(0.5, 1.0)
-            clicker.click((16000, 7000))  # dismiss comments sheet
-            sleep(0.5)
 
 
 def open_reels(clicker: Clicker, screen=None) -> bool:

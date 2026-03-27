@@ -5,6 +5,14 @@ from typing import Optional
 from .clicker import Clicker
 from .recognition import Screen, parse_screen
 
+COMMENT_SECTION_KEYWORDS = [
+    "close comments",
+    "filter comments",
+    "add comment",
+    "add a comment",
+    "join the conversation",
+]
+
 
 def open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Optional[Screen]:
     """Open any app via iOS Spotlight search. Retries up to `retries` times.
@@ -41,6 +49,7 @@ def open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Optional[Scre
 
 def _do_close_app(clicker: Clicker) -> None:
     # Slow swipe up from bottom edge to open app switcher
+    sleep(1)
     clicker.swipe((16384, 32767), up=4767, duration=1000)
     sleep(5)
     # Swipe up on the last app card to dismiss it
@@ -83,6 +92,11 @@ def is_ad(screen: Screen) -> bool:
             or any(el.content.lower() == "ad" for el in screen.elements))
 
 
+def is_comment_section_opened(screen: Screen) -> bool:
+    """Return True if the comments sheet is currently pulled up."""
+    return screen.contains(*COMMENT_SECTION_KEYWORDS)
+
+
 def chance_tap(clicker: Clicker, screen: Screen, name: str, chance: float) -> bool:
     """Roll the dice and tap a button found on screen. Returns True if tapped."""
     if random.random() >= chance:
@@ -114,11 +128,11 @@ def find_and_click(clicker: Clicker, *keywords: str, interactive_only: bool = Tr
 
 
 def post_comment(
-    clicker: Clicker,
-    text: str,
-    input_keywords: list[str],
-    submit_keyword: str | list[str],
-    cached_coords: Optional[dict] = None,
+        clicker: Clicker,
+        text: str,
+        input_keywords: list[str],
+        submit_keyword: str | list[str],
+        cached_coords: Optional[dict] = None,
 ) -> bool:
     """Find a comment input field, type text, and submit.
 
@@ -163,4 +177,8 @@ def post_comment(
         print(f"Cached comment_input at {input_coords}, comment_submit at {submit_coords}")
 
     clicker.click(submit_coords)
+    sleep(1)
+    clicker.click((16383, 4096))  # dismiss comments sheet
+    sleep(0.5)
+
     return True
