@@ -36,34 +36,34 @@ COMMENT_INPUT_KEYWORDS = [
     "what do you think",
 ]
 
-COMMENT_SUBMIT_KEYWORD = "send comment"
+COMMENT_SUBMIT_KEYWORD = ["send arrow", "send comment", "post comment", "send"]
 
 
 def browse_reels(
-    clicker: Clicker,
-    count: int = 100,
-    like_chance: float = 0.25,
-    follow_chance: float = 0.10,
-    comment_chance: float = 0.15,
+        clicker: Clicker,
+        count: int,
+        like_chance: float,
+        follow_chance: float,
+        comment_chance: float,
 ) -> None:
     comment_coords = {}
 
     for i in range(count):
+        if i > 0:
+            swipe_feed(clicker)
+            random_sleep(0.3, 0.8)
+
         print(f"--- Reel {i + 1}/{count} ---")
 
         sleep(1)
         screen = parse_screen(clicker)
         if not screen:
-            swipe_feed(clicker)
-            random_sleep(0.3, 0.8)
             continue
 
         if is_ad(screen):
             print("[Ad] Skipping...")
             if screen.find_and_click(clicker, "close", "back"):
                 sleep(0.5)
-            swipe_feed(clicker)
-            random_sleep(0.3, 0.8)
             continue
 
         random_sleep(1.5, 6.0)
@@ -87,24 +87,50 @@ def browse_reels(
             clicker.click((16000, 7000))  # dismiss comments sheet
             sleep(0.5)
 
-        swipe_feed(clicker)
-        random_sleep(0.3, 0.8)
+
+def open_reels(clicker: Clicker, screen=None) -> bool:
+    """Navigate to the Reels tab. Returns False if unsuccessful."""
+    for attempt in range(3):
+        print(f"Opening Reels (attempt {attempt + 1}/3)...")
+
+        if attempt == 0 and screen:
+            coords = screen.find("reels")
+            if coords:
+                clicker.click(coords)
+        else:
+            find_and_click(clicker, "reels")
+
+        sleep(1.5)
+        screen = parse_screen(clicker)
+        if screen and "reel" in screen.description.lower():
+            return True
+
+        print(f"Reels not open yet (attempt {attempt + 1}/3)")
+        clicker.click((16383, 16383))
+
+    print("WARNING: Could not open Reels after 3 attempts.")
+    return False
 
 
 def main():
     clicker = Clicker(DEVICE_ID)
 
-    if not open_app(clicker, "instagram"):
+    screen = open_app(clicker, "instagram")
+    if not screen:
         return
 
-    sleep(2)
-
-    if not find_and_click(clicker, "reels"):
+    if not open_reels(clicker, screen):
         return
 
-    sleep(1.5)
-    browse_reels(clicker, count=1)
-    close_app(clicker)
+    browse_reels(
+        clicker,
+        count=3,
+        like_chance=0.5,
+        follow_chance=0.01,
+        comment_chance=0.3
+    )
+
+    close_app(clicker, retries=5)
 
 
 if __name__ == "__main__":

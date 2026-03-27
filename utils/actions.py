@@ -1,31 +1,43 @@
 import random
 from time import sleep
+from typing import Optional
 
 from .clicker import Clicker
 from .recognition import Screen, parse_screen
 
 
-def open_app(clicker: Clicker, app_name: str) -> bool:
-    """Open any app via iOS Spotlight search."""
-    print("Opening Spotlight...")
-    clicker.swipe((16000, 10000), down=8000, duration=300)
-    sleep(0.5)
+def open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Optional[Screen]:
+    """Open any app via iOS Spotlight search. Retries up to `retries` times.
 
-    print(f"Typing '{app_name}'...")
-    clicker.type(app_name)
-    sleep(2)
+    Returns the parsed screen on success, or None on failure.
+    """
+    for attempt in range(1, retries + 1):
+        print(f"Opening Spotlight (attempt {attempt}/{retries})...")
+        clicker.swipe((16000, 10000), down=8000, duration=300)
+        sleep(0.5)
 
-    screen = parse_screen(clicker)
-    if not screen or not screen.find_and_click(clicker, app_name):
-        print(f"WARNING: '{app_name}' not found in Spotlight results")
-        return False
-    sleep(3)
-    return True
+        print(f"Typing '{app_name}'...")
+        clicker.type(app_name)
+        sleep(2)
+
+        screen = parse_screen(clicker)
+        if not screen or not screen.find_and_click(clicker, app_name):
+            print(f"WARNING: '{app_name}' not found in Spotlight results")
+            continue
+
+        sleep(3)
+
+        screen = parse_screen(clicker)
+        if screen and app_name.lower() in screen.app_name.lower():
+            return screen
+
+        print(f"WARNING: '{app_name}' did not open (current app: '{screen.app_name if screen else 'None'}')")
+
+    print(f"ERROR: Failed to open '{app_name}' after {retries} attempts.")
+    return None
 
 
-def close_app(clicker: Clicker) -> None:
-    """Open app switcher, dismiss the last app, then tap home."""
-    print("Closing app...")
+def _do_close_app(clicker: Clicker) -> None:
     # Slow swipe up from bottom edge to open app switcher
     clicker.swipe((16384, 32767), up=4767, duration=1000)
     sleep(5)
@@ -34,6 +46,26 @@ def close_app(clicker: Clicker) -> None:
     sleep(5)
     # Tap home area to exit app switcher
     clicker.click((16384, 30000), duration=100)
+
+
+def close_app(clicker: Clicker, retries: int = 3) -> bool:
+    """Open app switcher, dismiss the last app, then tap home.
+
+    Verifies the device returned to the Home Screen after closing.
+    Retries up to `retries` times if the app is still in the foreground.
+    Returns True if the Home Screen is confirmed, False otherwise.
+    """
+    for attempt in range(1, retries + 1):
+        print(f"Closing app (attempt {attempt}/{retries})...")
+        _do_close_app(clicker)
+        sleep(3)
+        screen = parse_screen(clicker)
+        if not screen or screen.app_name.lower() == "home screen":
+            print("App closed successfully.")
+            return True
+        print(f"App still open after attempt {attempt} (screen: '{screen.app_name}'), retrying...")
+    print(f"Warning: could not confirm app was closed after {retries} attempts.")
+    return False
 
 
 _AD_KEYWORDS = [
@@ -83,10 +115,16 @@ def post_comment(
     clicker: Clicker,
     text: str,
     input_keywords: list[str],
-    submit_keyword: str,
-    cached_coords: dict | None = None,
+    submit_keyword: str | list[str],
+    cached_coords: Optional[dict] = None,
 ) -> bool:
-    """Find a comment input field, type text, and submit."""
+    """Find a comment input field, type text, and submit.
+
+    On the first call, parses the screen twice: once to find the input field,
+    and again after typing to find the send button (which only appears once the
+    keyboard is open). Coords are stored in `cached_coords` so subsequent calls
+    skip both parses entirely.
+    """
     if cached_coords and "comment_input" in cached_coords and "comment_submit" in cached_coords:
         clicker.click(cached_coords["comment_input"])
         clicker.type(text)
@@ -97,6 +135,7 @@ def post_comment(
     screen = parse_screen(clicker)
     if not screen:
         return False
+
     input_coords = screen.find(*input_keywords, interactive_only=False)
     if not input_coords:
         print("WARNING: Comment input not found")
@@ -104,12 +143,14 @@ def post_comment(
 
     clicker.click(input_coords)
     clicker.type(text)
-    sleep(2)
+    sleep(1)
 
     screen = parse_screen(clicker)
     if not screen:
         return False
-    submit_coords = screen.find(submit_keyword, interactive_only=False)
+
+    keywords = submit_keyword if isinstance(submit_keyword, list) else [submit_keyword]
+    submit_coords = screen.find(*keywords, interactive_only=False)
     if not submit_coords:
         print(f"WARNING: Submit button not found, elements: {[e.content for e in screen.elements]}")
         return False

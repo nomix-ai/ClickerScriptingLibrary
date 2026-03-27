@@ -28,7 +28,7 @@ def restart(device_id):
         device_id: Device ID
     """
     response = session.post(f"{API_URL}/{device_id}/restart")
-    result = response.json()
+    result = _parse_action_response(response)
     print(result)
     return result
 
@@ -47,7 +47,7 @@ def click(device_id, duration=300):
         f"{API_URL}/{device_id}/click",
         json=payload
     )
-    result = response.json()
+    result = _parse_action_response(response)
     print(result)
     return result
 
@@ -76,7 +76,7 @@ def move(device_id, start, end, is_pressed=False, duration=300):
         f"{API_URL}/{device_id}/move",
         json=payload
     )
-    result = response.json()
+    result = _parse_action_response(response)
     print(result)
     return result
 
@@ -106,7 +106,7 @@ def scroll(device_id, x, y, direction, distance=300, duration=500):
     """
     payload = {"left": x, "top": y, "direction": direction, "distance": distance, "duration": duration}
     response = session.post(f"{API_URL}/{device_id}/scroll", json=payload)
-    result = response.json()
+    result = _parse_action_response(response)
     print(result)
     return result
 
@@ -138,7 +138,7 @@ def type_text(device_id, text):
         f"{API_URL}/{device_id}/keyboard/type",
         json=payload
     )
-    result = response.json()
+    result = _parse_action_response(response)
     print(result)
     return result
 
@@ -187,3 +187,15 @@ def cancel_agent_task(device_id, task_id):
     )
     response.raise_for_status()
     return response.json()
+
+
+def _parse_action_response(response):
+    """Safely parse a response from an action endpoint.
+
+    Action endpoints don't raise on failure and may return an empty body.
+    Falls back to a minimal dict so callers always get a consistent value.
+    """
+    try:
+        return response.json()
+    except Exception:
+        return {"success": False, "message": f"Empty or invalid response (HTTP {response.status_code})"}
