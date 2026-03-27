@@ -23,6 +23,7 @@ def open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Optional[Scre
         screen = parse_screen(clicker)
         if not screen or not screen.find_and_click(clicker, app_name):
             print(f"WARNING: '{app_name}' not found in Spotlight results")
+            close_app(clicker)
             continue
 
         sleep(3)
@@ -32,6 +33,7 @@ def open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Optional[Scre
             return screen
 
         print(f"WARNING: '{app_name}' did not open (current app: '{screen.app_name if screen else 'None'}')")
+        close_app(clicker)
 
     print(f"ERROR: Failed to open '{app_name}' after {retries} attempts.")
     return None

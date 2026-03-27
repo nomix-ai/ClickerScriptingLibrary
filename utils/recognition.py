@@ -95,19 +95,28 @@ class Screen:
         )
 
 
-def parse_screen(device: "str | Clicker") -> Screen | None:
-    """Get current screen state. Returns None on error."""
+def parse_screen(device: "str | Clicker", retries: int = 3, retry_delay: float = 3.0) -> Screen | None:
+    """Get current screen state. Returns None on error.
+
+    Retries up to `retries` times on transient errors (502, timeouts, etc.)
+    with `retry_delay` seconds between attempts.
+    """
     device_id = device.device_id if isinstance(device, Clicker) else device
     print("Parsing screen...")
-    try:
-        start = time.monotonic()
-        screen = Screen.from_dict(get_screen_state(device_id))
-        elapsed = time.monotonic() - start
-        print(
-            f"Parsing done in {elapsed:.1f}s | app={screen.app_name}"
-            f" | {screen.description} | {len(screen.elements)} elements"
-        )
-        return screen
-    except (requests.RequestException, TimeoutError) as e:
-        print(f"ERROR: parse_screen failed: {e}")
-        return None
+    for attempt in range(1, retries + 1):
+        try:
+            start = time.monotonic()
+            screen = Screen.from_dict(get_screen_state(device_id))
+            elapsed = time.monotonic() - start
+            print(
+                f"Parsing done in {elapsed:.1f}s | app={screen.app_name}"
+                f" | {screen.description} | {len(screen.elements)} elements"
+            )
+            return screen
+        except (requests.RequestException, TimeoutError) as e:
+            if attempt < retries:
+                print(f"WARNING: parse_screen attempt {attempt}/{retries} failed: {e} — retrying in {retry_delay:.0f}s...")
+                time.sleep(retry_delay)
+            else:
+                print(f"ERROR: parse_screen failed after {retries} attempts: {e}")
+    return None
