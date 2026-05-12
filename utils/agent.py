@@ -76,9 +76,13 @@ class Agent:
 
     def run(self, task: str) -> str | None:
         """Convenience: execute a task and poll until done."""
-        self.execute(task)
         try:
+            self.execute(task)
             return self.poll()
+        except KeyboardInterrupt:
+            print("\n\nInterrupted — cancelling task...")
+            self.cancel()
+            return
         except TimeoutError as e:
             print(f"ERROR: {e}")
             self.cancel()

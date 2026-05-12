@@ -24,12 +24,7 @@ def main():
     print(f"Task: {task}\n")
 
     agent = Agent(DEVICE_ID)
-    try:
-        result = agent.run(task)
-    except KeyboardInterrupt:
-        print("\n\nInterrupted — cancelling task...")
-        agent.cancel()
-        return
+    result = agent.run(task)
 
     if result:
         print(f"\nResult: {result}")
