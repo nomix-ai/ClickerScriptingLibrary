@@ -3,6 +3,7 @@
 Usage:
     python3 -m scripts.switch-screen-viewing-iphone-12
 """
+from time import sleep
 
 from utils.clicker import Clicker
 from utils.environment import DEVICE_ID
@@ -10,6 +11,10 @@ from utils.environment import DEVICE_ID
 
 def main():
     clicker = Clicker(DEVICE_ID)
+
+    # Close "Screen Broadcasting" dialog, may help immediately. Then stop the script
+    clicker.click((10500, 18500))
+    sleep(5)
 
     # Close possible opened dialog
     clicker.click((16600, 32500))
