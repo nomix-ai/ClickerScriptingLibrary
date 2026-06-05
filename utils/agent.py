@@ -40,21 +40,14 @@ class Agent:
         self,
         task_id: str | None = None,
         interval: float = 1.0,
-        timeout: float = 300.0,
     ) -> str | None:
         """Poll task until completion, printing events to stdout."""
         tid = task_id or self.current_task_id
         if not tid:
             raise ValueError("No task_id -- call execute() first or pass task_id")
 
-        deadline = time.time() + timeout
         seen_events = 0
         while True:
-            if time.time() > deadline:
-                raise TimeoutError(
-                    f"poll() exceeded {timeout}s for task {tid}"
-                )
-
             task = get_agent_task(self.device_id, tid)
             events = task.get("events", [])
 
@@ -83,7 +76,3 @@ class Agent:
             print("\n\nInterrupted — cancelling task...")
             self.cancel()
             return
-        except TimeoutError as e:
-            print(f"ERROR: {e}")
-            self.cancel()
-            return None
