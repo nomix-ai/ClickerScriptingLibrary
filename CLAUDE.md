@@ -70,6 +70,13 @@ clicker.swipe(coords: tuple[int, int], up: int = 0, down: int = 0, left: int = 0
 
 clicker.type(text: str)
 # Type text on device keyboard. Max 10000 chars.
+
+clicker.key_combo(codes: list[str])
+# Press a key combination, e.g. ["MetaLeft", "Space"] for Spotlight.
+# Keys pressed in order, released in reverse.
+
+clicker.get_screenshot() -> bytes | None
+# Latest JPEG frame from the device stream, or None if no frame (stream down).
 ```
 
 Under the hood `click` calls `POST /{device_id}/click` (duration-based press at current cursor position) and `move` calls `POST /{device_id}/move` (absolute coordinate movement). Action endpoints don't raise on failure — they return `{"success": bool, "message": str}`.

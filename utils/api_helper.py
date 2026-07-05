@@ -143,6 +143,40 @@ def type_text(device_id, text):
     return result
 
 
+def key_combo(device_id, codes):
+    """Press keys in order and release them in reverse (e.g. Cmd+Space).
+
+    Args:
+        device_id: Device ID
+        codes: List of key codes, e.g. ["MetaLeft", "Space"]
+    """
+    payload = {"codes": codes}
+    response = session.post(
+        f"{API_URL}/{device_id}/keyboard/combo",
+        json=payload
+    )
+    result = _parse_action_response(response)
+    print(result)
+    return result
+
+
+def get_screenshot(device_id):
+    """Fetch the latest JPEG frame from the device stream.
+
+    Args:
+        device_id: Device ID
+    Returns:
+        Raw JPEG bytes, or None if no frame is available (e.g. stream down).
+    """
+    try:
+        response = session.get(f"{API_URL}/{device_id}/screenshot", timeout=15)
+    except requests.RequestException:
+        return None
+    if response.status_code == 200:
+        return response.content
+    return None
+
+
 def run_agent(device_id, task):
     """Start a new agent task.
 

@@ -1,4 +1,4 @@
-from .api_helper import move, click, type_text
+from .api_helper import move, click, type_text, key_combo, get_screenshot
 
 
 class Clicker:
@@ -73,3 +73,19 @@ class Clicker:
         """
         result = type_text(self.device_id, text)
         return result
+
+    def key_combo(self, codes: list[str]):
+        """Press a key combination (e.g. ["MetaLeft", "Space"] to open Spotlight).
+
+        Args:
+            codes: List of key codes, pressed in order and released in reverse
+        """
+        return key_combo(self.device_id, codes)
+
+    def get_screenshot(self):
+        """Fetch the latest JPEG frame from the device stream.
+
+        Returns:
+            Raw JPEG bytes, or None if the stream has no frame available.
+        """
+        return get_screenshot(self.device_id)
