@@ -16,9 +16,9 @@ HID_MAX = 32767
 HID_CENTER = HID_MAX // 2
 
 # Blind wake/unlock targets (wake.py)
-WAKE_TAP = (HID_CENTER, HID_CENTER)              # neutral spot on the lock screen
-UNLOCK_FROM = (HID_CENTER, HID_MAX)              # bottom edge
-UNLOCK_TO = (HID_CENTER, HID_MAX * 25 // 100)    # swipe up to unlock (no passcode)
+WAKE_TAP = (HID_CENTER, HID_CENTER)  # neutral spot on the lock screen
+UNLOCK_FROM = (HID_CENTER, HID_MAX)  # bottom edge
+UNLOCK_TO = (HID_CENTER, HID_MAX * 25 // 100)  # swipe up to unlock (no passcode)
 
 # Broadcast restart sequence (reconnect.py)
 APP_NAME = "NMX Viewer"
@@ -31,20 +31,18 @@ STOP_DIALOG_CANCEL = (22586, 18662)
 STOPPED_DIALOG_OK = (16384, 18000)
 
 
-def reconnect_broadcast(clicker: Clicker) -> None:
-    # Clear a possible modal system alert
-    clicker.click(STOP_DIALOG_CANCEL)
-    sleep(1)
-    clicker.click(STOPPED_DIALOG_OK)
-    sleep(1)
+def wake_up_the_phone(clicker: Clicker) -> None:
+    """Wake, unlock, and (re)start the stream."""
+    if clicker.get_screenshot() is not None:
+        print("Stream already up — skipping")
+        return
 
-    # Dismiss leftovers of a failed previous attempt (Spotlight is a toggle)
-    clicker.key_combo(["Escape"])
+    # Tap to light up the sleeping screen -> the lock screen appears
+    clicker.click(WAKE_TAP)
     sleep(1)
-    clicker.key_combo(["Escape"])
-    sleep(1)
+    clicker.swipe(UNLOCK_FROM, up=UNLOCK_FROM[1] - UNLOCK_TO[1], duration=2000)
+    sleep(2)
 
-    # Open the app via Spotlight
     clicker.key_combo(SPOTLIGHT_COMBO)
     sleep(3)
     clicker.type(APP_NAME)
@@ -66,23 +64,6 @@ def reconnect_broadcast(clicker: Clicker) -> None:
     clicker.key_combo(HOME_COMBO)
     sleep(1)
     clicker.key_combo(HOME_COMBO)
-
-
-def wake_up_the_phone(clicker: Clicker) -> None:
-    """Wake, unlock, and (re)start the stream."""
-    if clicker.get_screenshot() is not None:
-        print("Stream already up — skipping")
-        return
-
-    # Tap to light up the sleeping screen -> the lock screen appears
-    clicker.click(WAKE_TAP)
-    sleep(1.5)
-    # Swipe up from the bottom edge to unlock (assumes no passcode)
-    clicker.swipe(UNLOCK_FROM, up=UNLOCK_FROM[1] - UNLOCK_TO[1], duration=250)
-    sleep(2)
-
-    # Start the broadcast via the existing, production-tested sequence
-    reconnect_broadcast(clicker)
 
 
 def main():
