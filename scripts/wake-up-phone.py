@@ -26,9 +26,7 @@ SPOTLIGHT_COMBO = ["MetaLeft", "Space"]
 KILL_COMBO = ["MetaLeft", "KeyE"]
 BROADCAST_COMBO = ["MetaLeft", "KeyB"]
 HOME_COMBO = ["MetaLeft", "KeyH"]
-START_BROADCAST_OK = (16600, 19300)
-STOP_DIALOG_CANCEL = (22586, 18662)
-STOPPED_DIALOG_OK = (16384, 18000)
+START_BROADCAST_OK = (HID_CENTER, 19300)
 
 
 def wake_up_the_phone(clicker: Clicker) -> None:
@@ -39,9 +37,9 @@ def wake_up_the_phone(clicker: Clicker) -> None:
 
     # Tap to light up the sleeping screen -> the lock screen appears
     clicker.click(WAKE_TAP)
-    sleep(1)
+    sleep(1.5)
     clicker.swipe(UNLOCK_FROM, up=UNLOCK_FROM[1] - UNLOCK_TO[1], duration=2000)
-    sleep(2)
+    sleep(4)
 
     clicker.key_combo(SPOTLIGHT_COMBO)
     sleep(3)
@@ -58,9 +56,9 @@ def wake_up_the_phone(clicker: Clicker) -> None:
     clicker.key_combo(BROADCAST_COMBO)
     sleep(3)
     clicker.click(START_BROADCAST_OK)
-    sleep(30)
 
-    # Leave the device on the Home Screen (broadcast keeps running in the background)
+    # Go Home during the countdown instead of waiting it out
+    sleep(4)
     clicker.key_combo(HOME_COMBO)
     sleep(1)
     clicker.key_combo(HOME_COMBO)
