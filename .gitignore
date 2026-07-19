@@ -5,3 +5,10 @@ config.json
 **/__pycache__/
 .DS_Store
 /.vscode
+
+# Build / packaging artifacts
+/build/
+/dist/
+*.egg-info/
+*.egg
+.pytest_cache/

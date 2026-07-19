@@ -8,40 +8,79 @@ NomixClicker is a controlling dongle for iOS. It allows manual control, automati
 
 Part of the features are work-in-progress, see the [Roadmap](https://nomixclicker.com/).
 
-<p align="center">
-  <img src="res/reddit-script-example.gif" width="480" height="360">
-  <br>
-  <em style="font-size: 0.85em; opacity: 0.7;">Example: quick script for Reddit warmup.</em>
-</p>
+### Installation
 
-### How To Use This Library?
-
-Setup is easy. Just make sure you have Python, and then:
+Requires Python 3.10+. Install from PyPI:
 
 ```commandline
-pip install -r requirements.txt
+pip install nomix-clicker
 ```
 
 Buy a Clicker device if you don't have it (delivery takes ~2 weeks to any place in the world), then open the [Panel](https://panel.nomixclicker.com/choose_device) and get your API token.
 
 [Purchase on the official site only.](https://panel.nomixclicker.com/payment)
 
-Make a copy of `config.example.json` and name it `config.json`. Enter your API token and device id in appropriate fields.
+### Configuration
 
-Now you can launch any script from the `scripts` folder, for example:
+Provide your API token and device id in either of two ways (environment variables take precedence):
+
+**Environment variables:**
 
 ```commandline
-python3 -m scripts.airplane-mode-iphone-12
+export NOMIX_API_KEY="your-api-key"
+export NOMIX_DEVICE_ID="your-device-id"
+```
+
+**Or a `config.json`** in your working directory or next to the script (copy `config.example.json`):
+
+```json
+{
+  "API_KEY": "your-api-key",
+  "DEVICE_ID": "your-device-id",
+  "API_URL": "https://panel.nomixclicker.com/clicker/v1"
+}
+```
+
+### Quick start
+
+```python
+from nomix_clicker import Clicker, parse_screen, open_app, DEVICE_ID
+
+clicker = Clicker(DEVICE_ID)
+open_app(clicker, "Calculator")
+
+screen = parse_screen(clicker)     # returns None on network/timeout errors
+if screen:
+    print(screen.description)      # what the AI recognizer sees on screen
 ```
 
 Manual control of iPhones will work out-of-the-box, no setup needed.
 
-### Scripts
+### Examples
 
-The Library is designed to be easily extendable. Here are the scripts provided as examples (more will be added):
+Ready-made example scripts live in the [`examples/`](examples/) folder of the repository (not included in the pip package — clone the repo to get them). With the package installed, run one directly:
 
-- [**instagram-warmup.py**](scripts/instagram-warmup.py) - Scrolling Instagram Reels, liking, and commenting with configurable probabilities.
-- [**restart_all_devices.py**](scripts/restart_all_devices.py) - Restarts all devices associated with your account.
-- [**airplane-mode-iphone-12.py**](scripts/airplane-mode-iphone-12.py) - Toggles airplane mode on and off on iPhone 12.
-- [**switch-screen-viewing-iphone-12.py**](scripts/switch-screen-viewing-iphone-12.py) - Turns on/off Clicker screen viewing.
+```commandline
+python3 examples/notes.py
+```
+
+**Start here:**
+
+- [**notes.py**](examples/notes.py) - Safe, offline reference — opens the Notes app, creates a note, and types into it.
+- [**ai_agent.py**](examples/ai_agent.py) - Runs an autonomous AI agent task with real-time progress streaming — the agent drives the device on its own.
+
+**Device utilities** live in [`tools/`](tools/) — ⚠️ these change connectivity or the stream; running them may drop the device's broadcast:
+
+- [**restart_all_devices.py**](tools/restart_all_devices.py) - Restarts all devices associated with your account.
+- [**wake-up-phone.py**](tools/wake-up-phone.py) - Wakes, unlocks, and restarts the screen broadcast on a locked device.
+- [**airplane-mode-iphone-12.py**](tools/airplane-mode-iphone-12.py) - Toggles airplane mode on and off on iPhone 12.
+- [**switch-screen-viewing-iphone-12.py**](tools/switch-screen-viewing-iphone-12.py) - Turns Clicker screen viewing on/off.
+
+### Local development
+
+To work on the library itself, install it in editable mode:
+
+```commandline
+pip install -e .
+```
 
