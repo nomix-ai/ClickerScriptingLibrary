@@ -39,7 +39,7 @@ examples/
   ai_agent.py            — autonomous AI agent task runner
 tools/                   — device utilities (restart, wake-up, airplane mode, screen
                            viewing); may drop the device stream — not example material
-config.json              — API_URL, API_KEY, DEVICE_ID (in cwd, gitignored)
+config.json              — API_URL, API_KEY, DEVICE_ID (found via the config search path, gitignored)
 ```
 
 ## Imports
@@ -209,7 +209,8 @@ agent.run(task: str) -> str | None
 # (best effort) and re-raises.
 ```
 
-Task statuses: `pending` → `running` → `completed` | `failed` | `cancelled`. Max 100 steps per task.
+Task statuses: `pending` → `running` → `completed` | `failed` | `cancelled` | `interrupted`.
+There is no step limit — a stuck task must be cancelled explicitly.
 
 ### Environment
 
@@ -234,6 +235,7 @@ move(device_id, start, end, is_pressed=False, duration=300) # POST /{id}/move
 type_text(device_id, text)                                  # POST /{id}/keyboard/type
 scroll(device_id, direction, distance=300, duration=500)    # POST /{id}/scroll (distance 1-1000, at cursor position)
 get_screen_state(device_id)                                 # POST /{id}/screen-state
+get_screenshot(device_id)                                   # GET /{id}/screenshot
 get_devices()                                               # GET /devices
 get_status(device_id)                                       # GET /{id}/status
 restart(device_id)                                          # POST /{id}/restart
@@ -248,6 +250,7 @@ restart(device_id)                                          # POST /{id}/restart
 | 403 | Device belongs to another user |
 | 404 | Device not connected |
 | 409 | Agent: device already has a running task |
+| 422 | Invalid request payload (e.g. out-of-range values) |
 | 429 | AI request quota exceeded |
 | 502 | Vision API unavailable / no frame |
 
@@ -270,7 +273,7 @@ def main():
 
     sleep(2)
 
-    for i in range(count):
+    for _ in range(20):
         screen = parse_screen(clicker)
         if not screen:
             continue

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nomix-clicker"
 version = "0.1.0"
-description = "iOS device automation via the Nomix Clicker API — simulated touch input with AI screen recognition."
+description = "Python automation for real iPhones — direct control, AI screen recognition, and autonomous agents."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -27,9 +27,10 @@ classifiers = [
 dev = ["pytest>=8.0", "build>=1.0"]
 
 [project.urls]
-Homepage = "https://panel.nomixclicker.com"
+Homepage = "https://nomixclicker.com"
 Documentation = "https://panel.nomixclicker.com/docs"
 Repository = "https://github.com/nomix-ai/ClickerScriptingLibrary"
+"Get a Device" = "https://panel.nomixclicker.com/payment"
 
 [tool.setuptools.packages.find]
 where = ["src"]

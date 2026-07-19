@@ -1,14 +1,32 @@
-## NomixClicker Scripting Library
+# NomixClicker
 
-This is a library of ready-made scripts written in Python and using the free [Clicker API](https://panel.nomixclicker.com/docs).
+Python automation for real iPhones.
 
-### What Is Clicker?
+The Clicker is a small hardware device that plugs into an iPhone and controls
+it the way a person would — it taps, swipes, and types on the actual screen.
+This library is its Python API.
 
-NomixClicker is a controlling dongle for iOS. It allows manual control, automatic control via API, and fully autonomous AI mode.
+```python
+from nomix_clicker import Clicker, Agent, open_app, DEVICE_ID
 
-Part of the features are work-in-progress, see the [Roadmap](https://nomixclicker.com/).
+clicker = Clicker(DEVICE_ID)
+open_app(clicker, "Notes")
+clicker.type("Hello from Python")
 
-### Installation
+# or hand the whole task to the AI agent
+Agent(DEVICE_ID).run("Open Settings and enable Dark Mode")
+```
+
+- **Real devices.** Works with any app on a physical iPhone — no simulators,
+  no test frameworks, nothing installed on the phone's OS.
+- **AI screen recognition.** Find and tap elements by what they mean
+  ("the like button"), not by selectors or view hierarchies.
+- **Autonomous agent.** Describe a task in plain language — the agent looks
+  at the screen, decides, and acts, step by step.
+
+[Get a Clicker](https://panel.nomixclicker.com/payment) · [nomixclicker.com](https://nomixclicker.com/) · [API docs](https://panel.nomixclicker.com/docs)
+
+## Installation
 
 Requires Python 3.10+. Install from PyPI:
 
@@ -16,11 +34,9 @@ Requires Python 3.10+. Install from PyPI:
 pip install nomix-clicker
 ```
 
-Buy a Clicker device if you don't have it (delivery takes ~2 weeks to any place in the world), then open the [Panel](https://panel.nomixclicker.com/choose_device) and get your API token.
+Don't have a Clicker yet? [Get one on the official site](https://panel.nomixclicker.com/payment) — worldwide delivery in about two weeks. Then open the [Panel](https://panel.nomixclicker.com/choose_device) and grab your API token.
 
-[Purchase on the official site only.](https://panel.nomixclicker.com/payment)
-
-### Configuration
+## Configuration
 
 Provide your API token and device id in either of two ways (environment variables take precedence):
 
@@ -41,7 +57,7 @@ export NOMIX_DEVICE_ID="your-device-id"
 }
 ```
 
-### Quick start
+## Quick start
 
 ```python
 from nomix_clicker import Clicker, parse_screen, open_app, DEVICE_ID
@@ -54,9 +70,7 @@ if screen:
     print(screen.description)      # what the AI recognizer sees on screen
 ```
 
-Manual control of iPhones will work out-of-the-box, no setup needed.
-
-### Examples
+## Examples
 
 Ready-made example scripts live in the [`examples/`](examples/) folder of the repository (not included in the pip package — clone the repo to get them). With the package installed, run one directly:
 
@@ -76,7 +90,7 @@ python3 examples/notes.py
 - [**airplane-mode-iphone-12.py**](tools/airplane-mode-iphone-12.py) - Toggles airplane mode on and off on iPhone 12.
 - [**switch-screen-viewing-iphone-12.py**](tools/switch-screen-viewing-iphone-12.py) - Turns Clicker screen viewing on/off.
 
-### Local development
+## Local development
 
 To work on the library itself, install it in editable mode:
 
