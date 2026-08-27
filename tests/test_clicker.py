@@ -10,6 +10,8 @@ def _record(monkeypatch):
                         lambda *a, **k: calls.append(("move", a, k)) or {"success": True})
     monkeypatch.setattr(clicker_mod, "tap",
                         lambda *a, **k: calls.append(("tap", a, k)) or {"success": True})
+    monkeypatch.setattr(clicker_mod, "double_tap",
+                        lambda *a, **k: calls.append(("double_tap", a, k)) or {"success": True})
     return calls
 
 

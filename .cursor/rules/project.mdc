@@ -85,6 +85,10 @@ clicker.device_id: str                        # stored device ID
 clicker.click(coords: tuple[int, int], duration: int = 100)
 # Taps at coords (combined move+click in one call). duration = hold time in ms.
 
+clicker.double_tap(coords: tuple[int, int], duration: int = 50, gap: int = 100)
+# Double-taps at coords in one device-timed action. duration = hold time of
+# each tap in ms; gap = pause between taps in ms (0-500).
+
 clicker.swipe(coords: tuple[int, int], up: int = 0, down: int = 0, left: int = 0, right: int = 0, duration: int = 300)
 # Swipe from coords in given direction(s). Distance in HID units.
 
@@ -100,7 +104,7 @@ clicker.get_screenshot() -> bytes | None
 # Raises requests.HTTPError on 401/403 — an auth problem, not a missing frame.
 ```
 
-Under the hood `Clicker.click` calls `POST /{device_id}/tap` (combined move+click with a device-settle delay) and `swipe` calls `POST /{device_id}/move` (absolute coordinate movement). Action endpoints don't raise on failure — they return `{"success": bool, "message": str}`.
+Under the hood `Clicker.click` calls `POST /{device_id}/tap` (combined move+click with a device-settle delay), `double_tap` calls `POST /{device_id}/double-tap` (both taps timed locally by the device), and `swipe` calls `POST /{device_id}/move` (absolute coordinate movement). Action endpoints don't raise on failure — they return `{"success": bool, "message": str}`.
 
 ### Screen recognition
 
@@ -236,6 +240,7 @@ Available but rarely needed directly — most are wrapped by `Clicker`:
 
 ```python
 tap(device_id, coords, duration=100)                        # POST /{id}/tap
+double_tap(device_id, coords, duration=50, gap=100)         # POST /{id}/double-tap
 click(device_id, duration=300)                              # POST /{id}/click
 move(device_id, start, end, is_pressed=False, duration=300) # POST /{id}/move
 type_text(device_id, text)                                  # POST /{id}/keyboard/type
