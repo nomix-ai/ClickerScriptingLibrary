@@ -71,6 +71,20 @@ def tap(device_id, coords, duration=100):
     return _post_action(f"{get_api_url()}/{device_id}/tap", {"left": x, "top": y, "duration": duration})
 
 
+def double_tap(device_id, coords, duration=50, gap=100):
+    """Move to coordinates and double-tap with timing handled by the device.
+
+    Args:
+        device_id: Device ID
+        coords: Tuple of (x, y) coordinates
+        duration: Hold duration of each tap in milliseconds
+        gap: Pause between taps in milliseconds
+    """
+    x, y = coords
+    payload = {"left": x, "top": y, "duration": duration, "gap": gap}
+    return _post_action(f"{get_api_url()}/{device_id}/double-tap", payload)
+
+
 def move(device_id, start, end, is_pressed=False, duration=300):
     """Move mouse from start to end coordinates. Mouse released at end if pressed.
 

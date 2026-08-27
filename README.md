@@ -70,6 +70,23 @@ if screen:
     print(screen.description)      # what the AI recognizer sees on screen
 ```
 
+### Double tap
+
+Use `double_tap` when an app requires two taps close enough together to like,
+zoom, or select content:
+
+```python
+clicker.double_tap((16383, 16383))
+```
+
+The default hold duration is 50 ms per tap with a 100 ms gap. Both taps are
+timed by the Clicker device in one API action, avoiding network delay between
+separate `click()` calls. You can override either value:
+
+```python
+clicker.double_tap((16383, 16383), duration=60, gap=120)
+```
+
 ## Examples
 
 Ready-made example scripts live in the [`examples/`](examples/) folder of the repository (not included in the pip package — clone the repo to get them). With the package installed, run one directly:

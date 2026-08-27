@@ -1,4 +1,4 @@
-from .api_helper import move, tap, type_text, key_combo, get_screenshot
+from .api_helper import double_tap, get_screenshot, key_combo, move, tap, type_text
 
 
 class Clicker:
@@ -49,6 +49,21 @@ class Clicker:
             duration: Hold duration in milliseconds
         """
         return tap(self.device_id, coords, duration=duration)
+
+    def double_tap(
+        self,
+        coords: tuple[int, int],
+        duration: int = 50,
+        gap: int = 100,
+    ):
+        """Double-tap at coordinates with timing handled by the device.
+
+        Args:
+            coords: Tap coordinates tuple (x, y)
+            duration: Hold duration of each tap in milliseconds
+            gap: Pause between taps in milliseconds
+        """
+        return double_tap(self.device_id, coords, duration=duration, gap=gap)
 
     def type(self, text: str):
         """Type text on the device.
