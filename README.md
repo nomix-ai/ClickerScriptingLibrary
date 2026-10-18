@@ -87,6 +87,24 @@ separate `click()` calls. You can override either value:
 clicker.double_tap((16383, 16383), duration=60, gap=120)
 ```
 
+### Upload photos and videos
+
+`upload_media` sends a photo (JPEG, PNG, HEIC) or video (MP4, MOV, up to
+500 MB) to the iPhone's Photos and waits until the phone has saved it — so
+the file is the newest item in the gallery, ready to post:
+
+```python
+from nomix_clicker import open_app, upload_media
+
+item = upload_media(clicker, "videos/clip.mp4")   # None if rejected, failed or timed out
+if item:
+    open_app(clicker, "Instagram")                # pick the newest item from the gallery
+```
+
+NMX Viewer must be broadcasting on the phone — it collects the file from the
+device's queue. If the phone hasn't saved it within `timeout` seconds
+(default 300), the file is withdrawn so it can't appear in Photos later.
+
 ## Examples
 
 Ready-made example scripts live in the [`examples/`](examples/) folder of the repository (not included in the pip package — clone the repo to get them). With the package installed, run one directly:
@@ -99,6 +117,7 @@ python3 examples/notes.py
 
 - [**notes.py**](examples/notes.py) - Safe, offline reference — opens the Notes app, creates a note, and types into it.
 - [**ai_agent.py**](examples/ai_agent.py) - Runs an autonomous AI agent task with real-time progress streaming — the agent drives the device on its own.
+- [**upload_media.py**](examples/upload_media.py) - Sends a photo or video to the iPhone's Photos, then opens Photos to show it.
 
 **Device utilities** live in [`tools/`](tools/) — ⚠️ these change connectivity or the stream; running them may drop the device's broadcast:
 

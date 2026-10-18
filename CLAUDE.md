@@ -37,6 +37,7 @@ src/nomix_clicker/
 examples/
   notes.py               — safe reference implementation (open Notes, type a note)
   ai_agent.py            — autonomous AI agent task runner
+  upload_media.py        — send a photo/video to the iPhone's Photos
 tools/                   — device utilities (restart, wake-up, airplane mode, screen
                            viewing); may drop the device stream — not example material
 config.json              — API_URL, API_KEY, DEVICE_ID (found via the config search path, gitignored)
@@ -50,7 +51,7 @@ Import from the top-level package (or from submodules — both work):
 from nomix_clicker import (
     Clicker, Agent, Screen, Element, parse_screen,
     open_app, close_app, swipe_feed, swipe_back, is_ad, chance_tap,
-    post_comment, random_sleep, find_and_click, DEVICE_ID,
+    post_comment, upload_media, random_sleep, find_and_click, DEVICE_ID,
 )
 ```
 
@@ -186,6 +187,16 @@ post_comment(
 # Finds comment input, types text, submits. Caches coords for repeat use.
 # Leaves the comments sheet open — dismissing it is app-specific and up to
 # the caller (e.g. swipe_back or a targeted tap).
+
+upload_media(clicker: Clicker, path: str | Path, timeout: float = 300, interval: float = 2.0) -> dict | None
+# Sends a photo (JPEG, PNG, HEIC) or video (MP4, MOV, max 500 MB) to the
+# iPhone's Photos and waits until the phone saves it (polls every `interval`s).
+# NMX Viewer must be broadcasting on the phone — it collects the file.
+# Returns the media item ({id, kind, filename, sha256, size, status, ...})
+# once saved; the file is then the newest item in Photos, ready to post.
+# Returns None if the upload is rejected (413/415/429), the phone fails to
+# save it, or `timeout` passes after the upload — on timeout the file is withdrawn
+# from the queue. A missing local file raises FileNotFoundError.
 ```
 
 ### Agent (autonomous AI)
@@ -241,6 +252,9 @@ type_text(device_id, text)                                  # POST /{id}/keyboar
 scroll(device_id, direction, distance=300, duration=500)    # POST /{id}/scroll (distance 1-1000, at cursor position)
 get_screen_state(device_id)                                 # POST /{id}/screen-state
 get_screenshot(device_id)                                   # GET /{id}/screenshot
+send_media(device_id, path)                                 # POST /{id}/media (multipart, raises on HTTP errors)
+list_media(device_id)                                       # GET /{id}/media (latest files, newest first)
+delete_media(device_id, media_id)                           # DELETE /{id}/media/{media_id} (withdraw a queued file)
 get_devices()                                               # GET /devices
 get_status(device_id)                                       # GET /{id}/status
 restart(device_id)                                          # POST /{id}/restart
@@ -255,9 +269,13 @@ restart(device_id)                                          # POST /{id}/restart
 | 403 | Device belongs to another user |
 | 404 | Device not connected |
 | 409 | Agent: device already has a running task |
+| 413 | Media: file is over 500 MB |
+| 415 | Media: file is not JPEG, PNG, HEIC, MP4 or MOV |
+| 421 | Media: sent to a node instead of `https://panel.nomixclicker.com` |
 | 422 | Invalid request payload (e.g. out-of-range values) |
-| 429 | AI request quota exceeded |
+| 429 | AI request quota exceeded; media: device queue already holds 2048 MB |
 | 502 | Vision API unavailable / no frame |
+| 507 | Media: server is low on disk space |
 
 ## Script template
 
@@ -299,7 +317,7 @@ if __name__ == "__main__":
 
 ## Conventions
 
-- **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (parse_screen, get_status, get_devices).
+- **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (parse_screen, get_status, get_devices) and the media endpoints — `upload_media()` turns those errors into `None`.
 - **Error handling**: `parse_screen()` returns `None` on error — just check `if not screen:`.
 - **Timing**: always add `random_sleep()` between interactions for human-like variance.
 - **Screen reuse**: fetch once with `screen = parse_screen(clicker)`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.

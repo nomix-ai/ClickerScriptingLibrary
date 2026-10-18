@@ -21,6 +21,7 @@ from .actions import (
     random_sleep,
     swipe_back,
     swipe_feed,
+    upload_media,
 )
 from .agent import Agent
 from .clicker import Clicker
@@ -49,6 +50,7 @@ __all__ = [
     "chance_tap",
     "post_comment",
     "random_sleep",
+    "upload_media",
     # config
     "API_URL",
     "API_KEY",
