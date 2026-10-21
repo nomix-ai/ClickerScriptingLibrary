@@ -78,7 +78,7 @@ class Screen:
         coords = self.find(*keywords, interactive_only=interactive_only)
         if not coords:
             return False
-        return bool(clicker.click(coords).get("success"))
+        return bool(clicker.click(coords).get("status") == "sent")
 
     def contains(self, *keywords: str) -> bool:
         """Check if any keyword appears in description or any element (substring)."""

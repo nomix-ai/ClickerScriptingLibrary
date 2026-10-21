@@ -1,93 +1,63 @@
-from .api_helper import double_tap, get_screenshot, key_combo, move, tap, type_text
+from types import TracebackType
+
+from .api_helper import get_screenshot
+from .control import ControlSession
 
 
 class Clicker:
-    """Convenient tap/swipe/type wrapper around the low-level API."""
+    """One explicit control session; commands are never replayed after disconnect."""
 
-    def __init__(self, device_id: str):
-        """Initialize mouse controller.
+    device_id: str
+    control: ControlSession
 
-        Args:
-            device_id: Device ID
-        """
+    def __init__(self, device_id: str, *, timeout: float = 10):
         self.device_id = device_id
+        self.control = ControlSession(device_id, timeout=timeout)
 
-    def swipe(
-        self, coords: tuple[int, int],
-        up: int = 0, down: int = 0, left: int = 0, right: int = 0,
-        duration: int = 300,
-    ):
-        """Swipe from coords in the specified direction.
+    def __enter__(self) -> "Clicker":
+        self.connect()
+        return self
 
-        Args:
-            coords: Start coordinates tuple (x, y)
-            up: Swipe up distance in HID units (0-32767)
-            down: Swipe down distance in HID units
-            left: Swipe left distance in HID units
-            right: Swipe right distance in HID units
-            duration: Swipe duration in milliseconds
-        """
-        # Calculate end position and perform swipe
-        start_x, start_y = coords
-        end_x = start_x - left + right
-        end_y = start_y - up + down
-        end_coords = (end_x, end_y)
+    def __exit__(self, kind: type | None, value: BaseException | None, traceback: TracebackType | None) -> None:
+        self.close()
 
-        return move(
-            self.device_id,
-            coords,
-            end_coords,
-            is_pressed=True,
-            duration=duration
-        )
+    def connect(self, *, takeover: bool = False) -> None:
+        self.control.connect()
+        try:
+            self.control.request("control.acquire", {"takeover": takeover})
+        except BaseException:
+            self.close()
+            raise
 
-    def click(self, coords: tuple[int, int], duration: int = 100):
-        """Tap at coordinates (combined move+click in one call).
+    def close(self) -> None:
+        self.control.close()
 
-        Args:
-            coords: Tap coordinates tuple (x, y)
-            duration: Hold duration in milliseconds
-        """
-        return tap(self.device_id, coords, duration=duration)
+    def swipe(self, coords: tuple[int, int], up: int = 0, down: int = 0,
+              left: int = 0, right: int = 0, duration: int = 300) -> dict:
+        x, y = coords
+        return self.control.request("input.move", {
+            "start_left": x, "start_top": y, "end_left": x - left + right,
+            "end_top": y - up + down, "pressed": True, "duration": duration,
+        }, timeout=self.control.timeout + duration / 1000 + 1)
 
-    def double_tap(
-        self,
-        coords: tuple[int, int],
-        duration: int = 50,
-        gap: int = 100,
-    ):
-        """Double-tap at coordinates with timing handled by the device.
+    def click(self, coords: tuple[int, int], duration: int = 100) -> dict:
+        x, y = coords
+        return self.control.request("input.tap", {"left": x, "top": y, "duration": duration},
+                                    timeout=self.control.timeout + duration / 1000)
 
-        Args:
-            coords: Tap coordinates tuple (x, y)
-            duration: Hold duration of each tap in milliseconds
-            gap: Pause between taps in milliseconds
-        """
-        return double_tap(self.device_id, coords, duration=duration, gap=gap)
+    def double_tap(self, coords: tuple[int, int], duration: int = 50, gap: int = 100) -> dict:
+        x, y = coords
+        return self.control.request("input.doubleTap", {"left": x, "top": y, "duration": duration, "gap": gap},
+                                    timeout=self.control.timeout + (2 * duration + gap) / 1000)
 
-    def type(self, text: str):
-        """Type text on the device.
+    def type(self, text: str, delay: int = 20) -> dict:
+        return self.control.request("input.text", {"text": text, "delay": delay}, timeout=self.control.timeout + 132)
 
-        Args:
-            text: Text string to type
-        """
-        result = type_text(self.device_id, text)
-        return result
+    def key_combo(self, codes: list[str]) -> dict:
+        return self.control.request("input.keyCombo", {"codes": codes})
 
-    def key_combo(self, codes: list[str]):
-        """Press a key combination (e.g. ["MetaLeft", "Space"] to open Spotlight).
+    def restart(self) -> dict:
+        return self.control.request("device.restart")
 
-        Args:
-            codes: List of key codes, pressed in order and released in reverse
-        """
-        return key_combo(self.device_id, codes)
-
-    def get_screenshot(self):
-        """Fetch the latest JPEG frame from the device stream.
-
-        Returns:
-            Raw JPEG bytes, or None if the stream has no frame available.
-        Raises:
-            requests.HTTPError: on 401/403 (auth problem, not a missing frame).
-        """
+    def get_screenshot(self) -> bytes | None:
         return get_screenshot(self.device_id)

@@ -11,14 +11,14 @@ from nomix_clicker.environment import DEVICE_ID
 
 
 def main():
-    clicker = Clicker(DEVICE_ID)
+    with Clicker(DEVICE_ID) as clicker:
 
-    clicker.swipe((28813, 1000), down=10000)
-    clicker.click((6523, 6689))
-    sleep(10)
-    clicker.click((6523, 6689))
-    sleep(10)
-    clicker.click((16700, 26000))
+        clicker.swipe((28813, 1000), down=10000)
+        clicker.click((6523, 6689))
+        sleep(10)
+        clicker.click((6523, 6689))
+        sleep(10)
+        clicker.click((16700, 26000))
 
 
 if __name__ == '__main__':

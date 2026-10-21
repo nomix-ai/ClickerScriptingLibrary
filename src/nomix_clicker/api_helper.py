@@ -19,17 +19,6 @@ def _auth(request):
 session.auth = _auth
 
 
-def _post_action(url, payload=None, timeout=30):
-    """POST to an action endpoint: never raises, network errors map to the fallback dict."""
-    try:
-        response = session.post(url, json=payload, timeout=timeout)
-        result = _parse_action_response(response)
-    except requests.RequestException as e:
-        result = {"success": False, "message": str(e)}
-    print(result)
-    return result
-
-
 def get_devices():
     """Get list of connected devices.
 
@@ -43,74 +32,6 @@ def get_devices():
     return result
 
 
-def restart(device_id):
-    """Restart device.
-
-    Args:
-        device_id: Device ID
-    """
-    return _post_action(f"{get_api_url()}/{device_id}/restart", timeout=60)
-
-
-def click(device_id, duration=300):
-    """Click at the current cursor position.
-
-    Args:
-        device_id: Device ID
-        duration: Click duration in milliseconds
-    """
-    return _post_action(f"{get_api_url()}/{device_id}/click", {"duration": duration})
-
-
-def tap(device_id, coords, duration=100):
-    """Move to coordinates and click in one call (with a device-settle delay).
-
-    Args:
-        device_id: Device ID
-        coords: Tuple of (x, y) coordinates
-        duration: Hold duration in milliseconds
-    """
-    x, y = coords
-    return _post_action(f"{get_api_url()}/{device_id}/tap", {"left": x, "top": y, "duration": duration})
-
-
-def double_tap(device_id, coords, duration=50, gap=100):
-    """Move to coordinates and double-tap with timing handled by the device.
-
-    Args:
-        device_id: Device ID
-        coords: Tuple of (x, y) coordinates
-        duration: Hold duration of each tap in milliseconds
-        gap: Pause between taps in milliseconds
-    """
-    x, y = coords
-    payload = {"left": x, "top": y, "duration": duration, "gap": gap}
-    return _post_action(f"{get_api_url()}/{device_id}/double-tap", payload)
-
-
-def move(device_id, start, end, is_pressed=False, duration=300):
-    """Move mouse from start to end coordinates. Mouse released at end if pressed.
-
-    Args:
-        device_id: Device ID
-        start: Tuple of (x, y) start coordinates
-        end: Tuple of (x, y) end coordinates
-        is_pressed: Whether mouse button is pressed during movement
-        duration: Movement duration in milliseconds (0-5000)
-    """
-    start_x, start_y = start
-    end_x, end_y = end
-    payload = {
-        "start_left": start_x,
-        "start_top": start_y,
-        "end_left": end_x,
-        "end_top": end_y,
-        "is_pressed": is_pressed,
-        "duration": duration
-    }
-    return _post_action(f"{get_api_url()}/{device_id}/move", payload)
-
-
 def get_screen_state(device_id):
     """Get current screen state with all UI elements.
 
@@ -121,19 +42,6 @@ def get_screen_state(device_id):
     response = session.post(f"{get_api_url()}/{device_id}/screen-state", timeout=60)
     response.raise_for_status()
     return response.json()
-
-
-def scroll(device_id, direction, distance=300, duration=500):
-    """Scroll at the current cursor position.
-
-    Args:
-        device_id: Device ID
-        direction: "up" or "down"
-        distance: Scroll distance (1-1000)
-        duration: Scroll duration in milliseconds
-    """
-    payload = {"direction": direction, "distance": distance, "duration": duration}
-    return _post_action(f"{get_api_url()}/{device_id}/scroll", payload)
 
 
 def get_status(device_id):
@@ -149,26 +57,6 @@ def get_status(device_id):
     result = response.json()
     print(result)
     return result
-
-
-def type_text(device_id, text):
-    """Type text on the device.
-
-    Args:
-        device_id: Device ID
-        text: Text string to type (1-10000 characters)
-    """
-    return _post_action(f"{get_api_url()}/{device_id}/keyboard/type", {"text": text})
-
-
-def key_combo(device_id, codes):
-    """Press keys in order and release them in reverse (e.g. Cmd+Space).
-
-    Args:
-        device_id: Device ID
-        codes: List of key codes, e.g. ["MetaLeft", "Space"]
-    """
-    return _post_action(f"{get_api_url()}/{device_id}/keyboard/combo", {"codes": codes})
 
 
 def get_screenshot(device_id):
@@ -285,16 +173,3 @@ def cancel_agent_task(device_id, task_id):
     )
     response.raise_for_status()
     return response.json()
-
-
-def _parse_action_response(response):
-    """Safely parse a response from an action endpoint.
-
-    Action endpoints don't raise on failure and may return an empty body.
-    Falls back to a minimal dict so callers always get a consistent value.
-    """
-    try:
-        return response.json()
-    except Exception:
-        # a 2xx with an unparseable body is still an accepted action
-        return {"success": response.ok, "message": f"Empty or invalid response (HTTP {response.status_code})"}

@@ -10,37 +10,37 @@ from nomix_clicker.environment import DEVICE_ID
 
 
 def main():
-    clicker = Clicker(DEVICE_ID)
+    with Clicker(DEVICE_ID) as clicker:
 
-    # Close "Screen Broadcasting" dialog, may help immediately. Then stop the script
-    clicker.click((10500, 18500))
-    sleep(5)
+        # Close "Screen Broadcasting" dialog, may help immediately. Then stop the script
+        clicker.click((10500, 18500))
+        sleep(5)
 
-    # Close possible opened dialog
-    clicker.click((16600, 32500))
+        # Close possible opened dialog
+        clicker.click((16600, 32500))
 
-    # Swipe-up to close current app
-    clicker.swipe((16600, 32500), up=10000)
+        # Swipe-up to close current app
+        clicker.swipe((16600, 32500), up=10000)
 
-    # Reset in case Recent apps were opened
-    clicker.click((31000, 30000))
+        # Reset in case Recent apps were opened
+        clicker.click((31000, 30000))
 
-    # Swipe to the end most right of home screens
-    clicker.swipe((31000, 27500), left=20000)
-    clicker.swipe((31000, 27500), left=20000)
-    clicker.swipe((31000, 27500), left=20000)
+        # Swipe to the end most right of home screens
+        clicker.swipe((31000, 27500), left=20000)
+        clicker.swipe((31000, 27500), left=20000)
+        clicker.swipe((31000, 27500), left=20000)
 
-    # App Library
-    clicker.click((16600, 3500))
+        # App Library
+        clicker.click((16600, 3500))
 
-    # Open NMX Viewer
-    clicker.type("NMX Viewer")
-    clicker.click((4200, 6800))
+        # Open NMX Viewer
+        clicker.type("NMX Viewer")
+        clicker.click((4200, 6800))
 
-    # Switch screen viewing
-    clicker.click((16600, 24000))
-    clicker.click((16600, 19300))
-    clicker.click((16600, 24000))
+        # Switch screen viewing
+        clicker.click((16600, 24000))
+        clicker.click((16600, 19300))
+        clicker.click((16600, 24000))
 
 
 if __name__ == '__main__':

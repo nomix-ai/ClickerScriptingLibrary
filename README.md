@@ -9,9 +9,9 @@ This library is its Python API.
 ```python
 from nomix_clicker import Clicker, Agent, open_app, DEVICE_ID
 
-clicker = Clicker(DEVICE_ID)
-open_app(clicker, "Notes")
-clicker.type("Hello from Python")
+with Clicker(DEVICE_ID) as clicker:
+    open_app(clicker, "Notes")
+    clicker.type("Hello from Python")
 
 # or hand the whole task to the AI agent
 Agent(DEVICE_ID).run("Open Settings and enable Dark Mode")
@@ -62,13 +62,20 @@ export NOMIX_DEVICE_ID="your-device-id"
 ```python
 from nomix_clicker import Clicker, parse_screen, open_app, DEVICE_ID
 
-clicker = Clicker(DEVICE_ID)
-open_app(clicker, "Calculator")
-
-screen = parse_screen(clicker)     # returns None on network/timeout errors
-if screen:
-    print(screen.description)      # what the AI recognizer sees on screen
+with Clicker(DEVICE_ID) as clicker:
+    open_app(clicker, "Calculator")
+    screen = parse_screen(clicker)
+    if screen:
+        print(screen.description)
 ```
+
+### Control sessions
+
+Version 0.2 uses the unified WebSocket control API and requires the matching server release. The old HTTP command helpers are removed. Use `with Clicker(device_id)` or explicitly call `connect()` and `close()`. Opening a session acquires control without taking it from another user; `connect(takeover=True)` explicitly requests takeover.
+
+Commands return `{"status": "sent", "device_acknowledged": false}`. This confirms dispatch, not execution on the phone. Failures raise `ControlError` with `code` and `outcome` (`not_sent`, `partial`, or `unknown`). An interrupted session never reconnects or replays input automatically; create a new session only after checking the phone. Closing releases control and pending input.
+
+The examples below assume an open `clicker` context. For direct protocol access use `clicker.control.request(method, params)`. Discover the endpoint with `GET /clicker/v1/{device_id}/control`; method schemas are at `GET /clicker/v1/control-schema`. Screenshots, recognition, media and agent task management remain HTTP.
 
 ### Double tap
 

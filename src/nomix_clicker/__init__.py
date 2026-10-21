@@ -4,9 +4,9 @@ Simulate touch input and use AI screen recognition to navigate apps.
 
     from nomix_clicker import Clicker, parse_screen, open_app
 
-    clicker = Clicker("your-device-id")
-    open_app(clicker, "Calculator")
-    screen = parse_screen(clicker)
+    with Clicker("your-device-id") as clicker:
+        open_app(clicker, "Calculator")
+        screen = parse_screen(clicker)
 """
 
 from importlib.metadata import PackageNotFoundError, version as _dist_version
@@ -25,6 +25,7 @@ from .actions import (
 )
 from .agent import Agent
 from .clicker import Clicker
+from .control import ControlError, ControlSession
 from .environment import API_KEY, API_URL, DEVICE_ID
 from .recognition import Element, Screen, parse_screen
 
@@ -36,6 +37,8 @@ except PackageNotFoundError:  # running from a source tree without installation
 __all__ = [
     # core
     "Clicker",
+    "ControlSession",
+    "ControlError",
     "Agent",
     "Screen",
     "Element",

@@ -1,58 +1,53 @@
-"""Clicker swipe math and tap dispatch (api_helper mocked)."""
+from unittest.mock import MagicMock
 
-from nomix_clicker import Clicker
-from nomix_clicker import clicker as clicker_mod
+import pytest
 
-
-def _record(monkeypatch):
-    calls = []
-    monkeypatch.setattr(clicker_mod, "move",
-                        lambda *a, **k: calls.append(("move", a, k)) or {"success": True})
-    monkeypatch.setattr(clicker_mod, "tap",
-                        lambda *a, **k: calls.append(("tap", a, k)) or {"success": True})
-    monkeypatch.setattr(clicker_mod, "double_tap",
-                        lambda *a, **k: calls.append(("double_tap", a, k)) or {"success": True})
-    return calls
+from nomix_clicker import Clicker, ControlError
 
 
-def test_swipe_computes_end_coords(monkeypatch):
-    calls = _record(monkeypatch)
-    c = Clicker("dev")
-    c.swipe((10000, 10000), up=6000, duration=300)
-    # end_y = start_y - up = 4000; end_x unchanged
-    _, args, kwargs = calls[0]
-    device_id, start, end = args
-    assert device_id == "dev"
-    assert start == (10000, 10000)
-    assert end == (10000, 4000)
-    assert kwargs["is_pressed"] is True
+def client() -> Clicker:
+    clicker = Clicker("device")
+    clicker.control = MagicMock(timeout=10)
+    clicker.control.request.return_value = {"status": "sent", "device_acknowledged": False}
+    return clicker
 
 
-def test_swipe_combines_directions(monkeypatch):
-    calls = _record(monkeypatch)
-    c = Clicker("dev")
-    c.swipe((10000, 10000), down=2000, right=3000)
-    _, args, _ = calls[0]
-    _, _, end = args
-    assert end == (13000, 12000)  # x + right, y + down
+def test_context_acquires_without_takeover_and_releases_on_error():
+    clicker = client()
+    with pytest.raises(ValueError), clicker:
+        raise ValueError("stop")
+    clicker.control.connect.assert_called_once()
+    clicker.control.request.assert_called_once_with("control.acquire", {"takeover": False})
+    clicker.control.close.assert_called_once()
 
 
-def test_click_taps_once(monkeypatch):
-    calls = _record(monkeypatch)
-    c = Clicker("dev")
-    c.click((500, 700))
-    assert len(calls) == 1
-    kind, args, kwargs = calls[0]
-    assert kind == "tap"
-    assert args == ("dev", (500, 700))
-    assert kwargs["duration"] == 100
+def test_busy_session_closes_without_sending_input():
+    clicker = client()
+    clicker.control.request.side_effect = ControlError(-32002, "busy")
+    with pytest.raises(ControlError):
+        clicker.connect()
+    clicker.control.close.assert_called_once()
+    assert clicker.control.request.call_count == 1
 
 
-def test_click_returns_action_result(monkeypatch):
-    monkeypatch.setattr(clicker_mod, "tap",
-                        lambda *a, **k: {"success": False, "message": "boom"})
-    assert Clicker("dev").click((1, 2))["success"] is False
+def test_swipe_uses_one_atomic_movement():
+    clicker = client()
+    clicker.swipe((10000, 10000), up=6000, right=3000)
+    clicker.control.request.assert_called_once_with("input.move", {
+        "start_left": 10000, "start_top": 10000, "end_left": 13000, "end_top": 4000,
+        "pressed": True, "duration": 300,
+    }, timeout=11.3)
 
 
-def test_device_id_stored():
-    assert Clicker("abc123").device_id == "abc123"
+def test_click_reports_sent_not_phone_execution():
+    clicker = client()
+    assert clicker.click((500, 700)) == {"status": "sent", "device_acknowledged": False}
+    clicker.control.request.assert_called_once_with("input.tap", {"left": 500, "top": 700, "duration": 100}, timeout=10.1)
+
+
+def test_errors_propagate_and_stop_the_callers_macro():
+    clicker = client()
+    clicker.control.request.side_effect = ControlError(-32007, "lost", "unknown")
+    with pytest.raises(ControlError) as error:
+        clicker.click((1, 2))
+    assert error.value.outcome == "unknown"
