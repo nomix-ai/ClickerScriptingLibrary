@@ -129,6 +129,9 @@ class ControlSession:
             except (OSError, websocket.WebSocketException):
                 self.close()
                 raise ControlError(-32007, "Control request outcome is unknown", "unknown") from None
+            except KeyboardInterrupt:
+                self.close()
+                raise
         try:
             return future.result(timeout=deadline)
         except FutureTimeout:

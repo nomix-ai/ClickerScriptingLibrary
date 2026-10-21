@@ -2,6 +2,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Event, Thread
+from unittest.mock import patch
 
 import pytest
 from websockets.exceptions import ConnectionClosed
@@ -162,3 +163,13 @@ def test_close_settles_in_flight_request(service):
         with pytest.raises(ControlError) as error:
             future.result(1)
     assert error.value.outcome == "unknown"
+
+
+def test_interrupted_send_closes_the_session_and_cannot_be_retried(service):
+    client, fixture, _ = service
+    with patch.object(client.socket, "send", side_effect=KeyboardInterrupt), pytest.raises(KeyboardInterrupt):
+        client.request("input.tap", {"left": 1, "top": 2})
+    assert client.closed and not client.pending
+    with pytest.raises(ControlError):
+        client.request("input.tap", {"left": 1, "top": 2})
+    assert not fixture.messages
