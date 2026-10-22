@@ -1,8 +1,10 @@
 import mimetypes
 from pathlib import Path
+from urllib.parse import quote
 
 import requests
 
+from .control import ControlError
 from .environment import get_api_key, get_api_url
 
 # API reference: https://panel.nomixclicker.com/docs
@@ -17,6 +19,59 @@ def _auth(request):
 
 
 session.auth = _auth
+
+
+def send_command(device_id: str, method: str, params: dict | None = None, *, timeout: float = 240) -> dict:
+    try:
+        response = session.post(f"{get_api_url()}/{quote(device_id, safe='')}/{method}", json=params or {}, timeout=timeout)
+    except requests.RequestException:
+        raise ControlError(-32007, "Command response lost; do not automatically retry", "unknown") from None
+    try:
+        payload = response.json()
+    except ValueError:
+        raise ControlError(-32007, "Invalid command response; do not automatically retry", "unknown") from None
+    detail = payload.get("detail") if isinstance(payload, dict) else None
+    if response.status_code >= 400 and isinstance(detail, dict) and "code" in detail:
+        raise ControlError(detail["code"], detail["message"], detail["outcome"])
+    response.raise_for_status()
+    if not isinstance(payload, dict) or payload.get("success") is not True:
+        raise ControlError(-32007, "Unrecognized command response", "unknown")
+    return payload
+
+
+def restart(device_id: str) -> dict:
+    return send_command(device_id, "restart")
+
+
+def click(device_id: str, duration: int = 300) -> dict:
+    return send_command(device_id, "click", {"duration": duration})
+
+
+def tap(device_id: str, coords: tuple[int, int], duration: int = 100) -> dict:
+    return send_command(device_id, "tap", {"left": coords[0], "top": coords[1], "duration": duration})
+
+
+def double_tap(device_id: str, coords: tuple[int, int], duration: int = 50, gap: int = 100) -> dict:
+    return send_command(device_id, "double-tap", {"left": coords[0], "top": coords[1], "duration": duration, "gap": gap})
+
+
+def move(device_id: str, start: tuple[int, int], end: tuple[int, int], is_pressed: bool = False, duration: int = 300) -> dict:
+    return send_command(device_id, "move", {
+        "start_left": start[0], "start_top": start[1], "end_left": end[0], "end_top": end[1],
+        "is_pressed": is_pressed, "duration": duration,
+    })
+
+
+def scroll(device_id: str, direction: str, distance: int = 300, duration: int = 500) -> dict:
+    return send_command(device_id, "scroll", {"direction": direction, "distance": distance, "duration": duration})
+
+
+def type_text(device_id: str, text: str) -> dict:
+    return send_command(device_id, "keyboard/type", {"text": text})
+
+
+def key_combo(device_id: str, codes: list[str]) -> dict:
+    return send_command(device_id, "keyboard/combo", {"codes": codes})
 
 
 def get_devices():

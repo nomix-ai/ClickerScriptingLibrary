@@ -100,7 +100,7 @@ def test_discovery_auth_notifications_and_monotonic_ids(service):
     client, fixture, http = service
     result = client.request("control.acquire")
     assert result["device_acknowledged"] is False
-    client.request("input.tap", {"left": 1, "top": 2})
+    client.request("tap", {"left": 1, "top": 2})
     assert [message["id"] for message in fixture.messages] == [1, 2]
     assert http.paths == ["/clicker/v1/Device/control"]
     assert http.keys == fixture.keys == ["test-key"]
@@ -113,10 +113,10 @@ def test_unknown_outcome_closes_without_replay_or_reconnect(service, mode):
     client, fixture, _ = service
     fixture.mode = mode
     with pytest.raises(ControlError) as error:
-        client.request("input.tap", {"left": 1, "top": 2})
+        client.request("tap", {"left": 1, "top": 2})
     assert error.value.outcome == "unknown"
     with pytest.raises(ControlError):
-        client.request("input.tap", {"left": 1, "top": 2})
+        client.request("tap", {"left": 1, "top": 2})
     with pytest.raises(ControlError):
         client.connect()
     assert len(fixture.messages) == fixture.connections == 1
@@ -148,7 +148,7 @@ def test_concurrent_replies_correlate_by_id(service):
 def test_oversized_request_never_reaches_socket(service):
     client, fixture, _ = service
     with pytest.raises(ControlError) as error:
-        client.request("input.text", {"text": "x" * 65536})
+        client.request("keyboard/type", {"text": "x" * 65536})
     assert error.value.outcome == "not_sent"
     assert not fixture.messages
 
@@ -157,7 +157,7 @@ def test_close_settles_in_flight_request(service):
     client, fixture, _ = service
     fixture.mode = "timeout"
     with ThreadPoolExecutor(1) as pool:
-        future = pool.submit(client.request, "input.tap", {"left": 1, "top": 2})
+        future = pool.submit(client.request, "tap", {"left": 1, "top": 2})
         assert fixture.received.wait(1)
         client.close()
         with pytest.raises(ControlError) as error:
@@ -168,8 +168,8 @@ def test_close_settles_in_flight_request(service):
 def test_interrupted_send_closes_the_session_and_cannot_be_retried(service):
     client, fixture, _ = service
     with patch.object(client.socket, "send", side_effect=KeyboardInterrupt), pytest.raises(KeyboardInterrupt):
-        client.request("input.tap", {"left": 1, "top": 2})
+        client.request("tap", {"left": 1, "top": 2})
     assert client.closed and not client.pending
     with pytest.raises(ControlError):
-        client.request("input.tap", {"left": 1, "top": 2})
+        client.request("tap", {"left": 1, "top": 2})
     assert not fixture.messages

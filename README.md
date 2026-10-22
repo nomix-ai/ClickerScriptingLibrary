@@ -71,11 +71,13 @@ with Clicker(DEVICE_ID) as clicker:
 
 ### Control sessions
 
-Version 0.2 uses the unified WebSocket control API and requires the matching server release. The old HTTP command helpers are removed. Use `with Clicker(device_id)` or explicitly call `connect()` and `close()`. Opening a session acquires control without taking it from another user; `connect(takeover=True)` explicitly requests takeover.
+`Clicker(device_id).click((x, y))` and the existing `api_helper` command functions use HTTP: no connection setup is required. The server claims the device for each command and returns 409 when another controller owns it. Commands use the same names, parameters and execution service as the live panel.
+
+For a multi-step workflow, `with Clicker(device_id)` (or explicit `connect()` / `close()`) holds exclusive control over WebSocket until exit. This prevents another client from moving the phone between steps. `connect(takeover=True)` is an explicit takeover; a failed session never falls back to HTTP or replays input.
 
 Commands return `{"status": "sent", "device_acknowledged": false}`. This confirms dispatch, not execution on the phone. Failures raise `ControlError` with `code` and `outcome` (`not_sent`, `partial`, or `unknown`). An interrupted session never reconnects or replays input automatically; create a new session only after checking the phone. Closing releases control and pending input.
 
-The examples below assume an open `clicker` context. For direct protocol access use `clicker.control.request(method, params)`. Discover the endpoint with `GET /clicker/v1/{device_id}/control`; method schemas are at `GET /clicker/v1/control-schema`. Screenshots, recognition, media and agent task management remain HTTP.
+The multi-step examples below use an exclusive `clicker` context. For direct protocol access use `clicker.control.request(method, params)`. Discover the endpoint with `GET /clicker/v1/{device_id}/control`; method schemas are at `GET /clicker/v1/control-schema`. HTTP command endpoints and the WebSocket contract are both available. SDK 0.2 raises errors instead of returning an unchecked failure dictionary, so a failed command stops the caller’s workflow. Typing is bounded to 180 seconds per command.
 
 ### Double tap
 

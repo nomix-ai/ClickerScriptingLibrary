@@ -33,16 +33,16 @@ def test_busy_session_closes_without_sending_input():
 def test_swipe_uses_one_atomic_movement():
     clicker = client()
     clicker.swipe((10000, 10000), up=6000, right=3000)
-    clicker.control.request.assert_called_once_with("input.move", {
+    clicker.control.request.assert_called_once_with("move", {
         "start_left": 10000, "start_top": 10000, "end_left": 13000, "end_top": 4000,
-        "pressed": True, "duration": 300,
+        "is_pressed": True, "duration": 300,
     }, timeout=11.3)
 
 
 def test_click_reports_sent_not_phone_execution():
     clicker = client()
     assert clicker.click((500, 700)) == {"status": "sent", "device_acknowledged": False}
-    clicker.control.request.assert_called_once_with("input.tap", {"left": 500, "top": 700, "duration": 100}, timeout=10.1)
+    clicker.control.request.assert_called_once_with("tap", {"left": 500, "top": 700, "duration": 100}, timeout=10.1)
 
 
 def test_errors_propagate_and_stop_the_callers_macro():
