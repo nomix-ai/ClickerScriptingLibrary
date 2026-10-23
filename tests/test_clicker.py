@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -51,3 +51,12 @@ def test_errors_propagate_and_stop_the_callers_macro():
     with pytest.raises(ControlError) as error:
         clicker.click((1, 2))
     assert error.value.outcome == "unknown"
+
+
+
+def test_exclusive_typing_uses_the_owned_servers_budget_without_http():
+    clicker = client()
+    with patch('nomix_clicker.clicker.get_text_timeout') as discovery:
+        clicker.type('a' * 10000)
+    discovery.assert_not_called()
+    clicker.control.request.assert_called_once_with('keyboard/type', {'text': 'a' * 10000, 'delay': 0}, timeout=None)

@@ -25,6 +25,13 @@ class ControlError(RuntimeError):
         self.outcome = outcome
 
 
+def text_timeout_seconds(state: dict) -> float:
+    budget = state.get("text_timeout_ms") if isinstance(state, dict) else None
+    if isinstance(budget, bool) or not isinstance(budget, (int, float)) or not math.isfinite(budget) or budget <= 0:
+        raise ControlError(-32600, "Control timing limits have not been received")
+    return budget / 1000
+
+
 class ControlSession:
     device_id: str
     api_key: str
@@ -105,6 +112,8 @@ class ControlSession:
 
     def request(self, method: str, params: dict | None = None, *, timeout: float | None = None) -> dict:
         deadline = self.timeout if timeout is None else timeout
+        if method == "keyboard/type" and timeout is None:
+            deadline += text_timeout_seconds(self.state)
         if not math.isfinite(deadline) or deadline <= 0:
             raise ValueError("timeout must be positive")
         with self.send_lock:
@@ -133,7 +142,11 @@ class ControlSession:
                 self.close()
                 raise
         try:
-            return future.result(timeout=deadline)
+            result = future.result(timeout=deadline)
+            if method == "control.acquire" and "text_timeout_ms" in result:
+                with self.lock:
+                    self.state["text_timeout_ms"] = result["text_timeout_ms"]
+            return result
         except FutureTimeout:
             self.close()
             raise ControlError(-32007, "Control request timed out; outcome is unknown", "unknown") from None
@@ -164,7 +177,8 @@ class ControlSession:
             raise ControlError(-32600, "Invalid control response")
         if "method" in payload and "id" not in payload:
             if payload["method"] == "control.state" and isinstance(payload.get("params"), dict):
-                self.state = payload["params"]
+                with self.lock:
+                    self.state = payload["params"]
             return
         request_id = payload.get("id")
         if type(request_id) is not int or ("result" in payload) == ("error" in payload):

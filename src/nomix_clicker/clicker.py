@@ -1,7 +1,7 @@
 import math
 from types import TracebackType
 
-from .api_helper import get_screenshot, send_command
+from .api_helper import get_screenshot, get_text_timeout, send_command
 from .control import ControlError, ControlSession
 
 
@@ -50,6 +50,8 @@ class Clicker:
             raise ControlError(-32004, "Create a new Clicker after closing")
         if self.control is not None:
             return self.control.request(method, params, timeout=timeout)
+        if method == "keyboard/type" and timeout is None:
+            timeout = get_text_timeout(self.device_id, self.timeout)
         return send_command(self.device_id, method, params, timeout=self.timeout if timeout is None else timeout)
 
     def swipe(self, coords: tuple[int, int], up: int = 0, down: int = 0,
@@ -71,7 +73,7 @@ class Clicker:
                             timeout=self.timeout + (2 * duration + gap) / 1000)
 
     def type(self, text: str, delay: int = 0) -> dict:
-        return self.request("keyboard/type", {"text": text, "delay": delay}, timeout=self.timeout + 198)
+        return self.request("keyboard/type", {"text": text, "delay": delay})
 
     def key_combo(self, codes: list[str]) -> dict:
         return self.request("keyboard/combo", {"codes": codes})

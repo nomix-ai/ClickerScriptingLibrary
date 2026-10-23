@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 import requests
 
-from .control import ControlError
+from .control import ControlError, text_timeout_seconds
 from .environment import get_api_key, get_api_url
 
 # API reference: https://panel.nomixclicker.com/docs
@@ -21,7 +21,15 @@ def _auth(request):
 session.auth = _auth
 
 
-def send_command(device_id: str, method: str, params: dict | None = None, *, timeout: float = 240) -> dict:
+def get_text_timeout(device_id: str, timeout: float) -> float:
+    response = session.get(f"{get_api_url()}/{quote(device_id, safe='')}/control", timeout=timeout)
+    response.raise_for_status()
+    return timeout + text_timeout_seconds(response.json())
+
+
+def send_command(device_id: str, method: str, params: dict | None = None, *, timeout: float | None = None) -> dict:
+    if timeout is None:
+        timeout = get_text_timeout(device_id, 30) if method == "keyboard/type" else 240
     try:
         response = session.post(f"{get_api_url()}/{quote(device_id, safe='')}/{method}", json=params or {}, timeout=timeout)
     except requests.RequestException:
