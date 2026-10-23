@@ -1,93 +1,85 @@
-from .api_helper import double_tap, get_screenshot, key_combo, move, tap, type_text
+import math
+from types import TracebackType
+
+from .api_helper import get_screenshot, get_text_timeout, send_command
+from .control import ControlError, ControlSession
 
 
 class Clicker:
-    """Convenient tap/swipe/type wrapper around the low-level API."""
+    """HTTP commands by default; a context holds exclusive control across a workflow."""
 
-    def __init__(self, device_id: str):
-        """Initialize mouse controller.
+    device_id: str
+    control: ControlSession | None
+    timeout: float
+    closed: bool
 
-        Args:
-            device_id: Device ID
-        """
+    def __init__(self, device_id: str, *, timeout: float = 10):
+        if not math.isfinite(timeout) or timeout <= 0:
+            raise ValueError("timeout must be positive")
         self.device_id = device_id
+        self.control = None
+        self.timeout = timeout
+        self.closed = False
 
-    def swipe(
-        self, coords: tuple[int, int],
-        up: int = 0, down: int = 0, left: int = 0, right: int = 0,
-        duration: int = 300,
-    ):
-        """Swipe from coords in the specified direction.
+    def __enter__(self) -> "Clicker":
+        self.connect()
+        return self
 
-        Args:
-            coords: Start coordinates tuple (x, y)
-            up: Swipe up distance in HID units (0-32767)
-            down: Swipe down distance in HID units
-            left: Swipe left distance in HID units
-            right: Swipe right distance in HID units
-            duration: Swipe duration in milliseconds
-        """
-        # Calculate end position and perform swipe
-        start_x, start_y = coords
-        end_x = start_x - left + right
-        end_y = start_y - up + down
-        end_coords = (end_x, end_y)
+    def __exit__(self, kind: type | None, value: BaseException | None, traceback: TracebackType | None) -> None:
+        self.close()
 
-        return move(
-            self.device_id,
-            coords,
-            end_coords,
-            is_pressed=True,
-            duration=duration
-        )
+    def connect(self, *, takeover: bool = False) -> None:
+        if self.closed:
+            raise ControlError(-32004, "Create a new Clicker after closing")
+        if self.control is None:
+            self.control = ControlSession(self.device_id, timeout=self.timeout)
+        self.control.connect()
+        try:
+            self.control.request("control.acquire", {"takeover": takeover})
+        except BaseException:
+            self.close()
+            raise
 
-    def click(self, coords: tuple[int, int], duration: int = 100):
-        """Tap at coordinates (combined move+click in one call).
+    def close(self) -> None:
+        self.closed = True
+        if self.control is not None:
+            self.control.close()
 
-        Args:
-            coords: Tap coordinates tuple (x, y)
-            duration: Hold duration in milliseconds
-        """
-        return tap(self.device_id, coords, duration=duration)
+    def request(self, method: str, params: dict | None = None, *, timeout: float | None = None) -> dict:
+        if self.closed:
+            raise ControlError(-32004, "Create a new Clicker after closing")
+        if self.control is not None:
+            return self.control.request(method, params, timeout=timeout)
+        if method == "keyboard/type" and timeout is None:
+            timeout = get_text_timeout(self.device_id, self.timeout)
+        return send_command(self.device_id, method, params, timeout=self.timeout if timeout is None else timeout)
 
-    def double_tap(
-        self,
-        coords: tuple[int, int],
-        duration: int = 50,
-        gap: int = 100,
-    ):
-        """Double-tap at coordinates with timing handled by the device.
+    def swipe(self, coords: tuple[int, int], up: int = 0, down: int = 0,
+              left: int = 0, right: int = 0, duration: int = 300) -> dict:
+        x, y = coords
+        return self.request("move", {
+            "start_left": x, "start_top": y, "end_left": x - left + right,
+            "end_top": y - up + down, "is_pressed": True, "duration": duration,
+        }, timeout=self.timeout + duration / 1000 + 1)
 
-        Args:
-            coords: Tap coordinates tuple (x, y)
-            duration: Hold duration of each tap in milliseconds
-            gap: Pause between taps in milliseconds
-        """
-        return double_tap(self.device_id, coords, duration=duration, gap=gap)
+    def click(self, coords: tuple[int, int], duration: int = 100) -> dict:
+        x, y = coords
+        return self.request("tap", {"left": x, "top": y, "duration": duration},
+                            timeout=self.timeout + duration / 1000)
 
-    def type(self, text: str):
-        """Type text on the device.
+    def double_tap(self, coords: tuple[int, int], duration: int = 50, gap: int = 100) -> dict:
+        x, y = coords
+        return self.request("double-tap", {"left": x, "top": y, "duration": duration, "gap": gap},
+                            timeout=self.timeout + (2 * duration + gap) / 1000)
 
-        Args:
-            text: Text string to type
-        """
-        result = type_text(self.device_id, text)
-        return result
+    def type(self, text: str, delay: int = 0) -> dict:
+        return self.request("keyboard/type", {"text": text, "delay": delay})
 
-    def key_combo(self, codes: list[str]):
-        """Press a key combination (e.g. ["MetaLeft", "Space"] to open Spotlight).
+    def key_combo(self, codes: list[str]) -> dict:
+        return self.request("keyboard/combo", {"codes": codes})
 
-        Args:
-            codes: List of key codes, pressed in order and released in reverse
-        """
-        return key_combo(self.device_id, codes)
+    def restart(self) -> dict:
+        return self.request("restart")
 
-    def get_screenshot(self):
-        """Fetch the latest JPEG frame from the device stream.
-
-        Returns:
-            Raw JPEG bytes, or None if the stream has no frame available.
-        Raises:
-            requests.HTTPError: on 401/403 (auth problem, not a missing frame).
-        """
+    def get_screenshot(self) -> bytes | None:
         return get_screenshot(self.device_id)

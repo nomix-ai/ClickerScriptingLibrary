@@ -143,12 +143,12 @@ def post_comment(
         submit_keyword = [submit_keyword]
 
     if cached_coords and "comment_input" in cached_coords and "comment_submit" in cached_coords:
-        if not clicker.click(cached_coords["comment_input"]).get("success"):
+        if not clicker.click(cached_coords["comment_input"]).get("status") == "sent":
             return False
-        if not clicker.type(text).get("success"):
+        if not clicker.type(text).get("status") == "sent":
             return False
         sleep(0.5)
-        return bool(clicker.click(cached_coords["comment_submit"]).get("success"))
+        return bool(clicker.click(cached_coords["comment_submit"]).get("status") == "sent")
 
     screen = parse_screen(clicker)
     if not screen:
@@ -159,9 +159,9 @@ def post_comment(
         print("WARNING: Comment input not found")
         return False
 
-    if not clicker.click(input_coords).get("success"):
+    if not clicker.click(input_coords).get("status") == "sent":
         return False
-    if not clicker.type(text).get("success"):
+    if not clicker.type(text).get("status") == "sent":
         return False
     sleep(1)
 
@@ -179,7 +179,7 @@ def post_comment(
         cached_coords["comment_submit"] = submit_coords
         print(f"Cached comment_input at {input_coords}, comment_submit at {submit_coords}")
 
-    return bool(clicker.click(submit_coords).get("success"))
+    return bool(clicker.click(submit_coords).get("status") == "sent")
 
 
 def _error_detail(e: requests.RequestException) -> str:

@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nomix-clicker"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python automation for real iPhones — direct control, AI screen recognition, and autonomous agents."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{ name = "Nixon - FZCO" }]
 keywords = ["automation", "ios", "clicker", "nomix", "ui-automation", "device-automation"]
-dependencies = ["requests>=2.32"]
+dependencies = ["requests>=2.32", "websocket-client==1.9.2"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "build>=1.0"]
+dev = ["pytest>=8.0", "build>=1.0", "websockets==16.1"]
 
 [project.urls]
 Homepage = "https://nomixclicker.com"

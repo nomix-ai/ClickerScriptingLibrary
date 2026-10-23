@@ -7,6 +7,8 @@ name: Publish to PyPI
 # Add "[skip ci]" to a commit message to skip a release.
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
 
@@ -38,6 +40,7 @@ jobs:
           twine check dist/*
 
   release:
+    if: github.event_name == 'push'
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -68,18 +71,20 @@ jobs:
           # PyPI's JSON can be CDN-stale right after a release; the last tag is not
           LATEST_TAG=$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -n 1)
           NEXT=$(python3 - "$LATEST" "$LATEST_TAG" <<'EOF'
-          import re, sys
+          import re, sys, tomllib
 
           def parse(v):
               m = re.match(r"(\d+)\.(\d+)\.(\d+)", v or "")
               return tuple(int(x) for x in m.groups()) if m else None
 
           versions = [p for p in (parse(a) for a in sys.argv[1:3]) if p]
+          declared = parse(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])
           if versions:
               major, minor, patch = max(versions)
-              print(f"{major}.{minor}.{patch + 1}")
+              version = max(declared, (major, minor, patch + 1))
           else:
-              print("0.1.0")  # first release ever
+              version = declared
+          print('.'.join(map(str, version)))
           EOF
           )
           echo "next=$NEXT" >> "$GITHUB_OUTPUT"

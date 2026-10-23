@@ -9,9 +9,9 @@ This library is its Python API.
 ```python
 from nomix_clicker import Clicker, Agent, open_app, DEVICE_ID
 
-clicker = Clicker(DEVICE_ID)
-open_app(clicker, "Notes")
-clicker.type("Hello from Python")
+with Clicker(DEVICE_ID) as clicker:
+    open_app(clicker, "Notes")
+    clicker.type("Hello from Python")
 
 # or hand the whole task to the AI agent
 Agent(DEVICE_ID).run("Open Settings and enable Dark Mode")
@@ -62,13 +62,22 @@ export NOMIX_DEVICE_ID="your-device-id"
 ```python
 from nomix_clicker import Clicker, parse_screen, open_app, DEVICE_ID
 
-clicker = Clicker(DEVICE_ID)
-open_app(clicker, "Calculator")
-
-screen = parse_screen(clicker)     # returns None on network/timeout errors
-if screen:
-    print(screen.description)      # what the AI recognizer sees on screen
+with Clicker(DEVICE_ID) as clicker:
+    open_app(clicker, "Calculator")
+    screen = parse_screen(clicker)
+    if screen:
+        print(screen.description)
 ```
+
+### Control sessions
+
+`Clicker(device_id).click((x, y))` and the existing `api_helper` command functions use HTTP: no connection setup is required. The server claims the device for each command and returns 409 when another controller owns it. Commands use the same names, parameters and execution service as the live panel.
+
+For a multi-step workflow, `with Clicker(device_id)` (or explicit `connect()` / `close()`) holds exclusive control over WebSocket until exit. This prevents another client from moving the phone between steps. `connect(takeover=True)` is an explicit takeover; a failed session never falls back to HTTP or replays input.
+
+Commands return `{"status": "sent", "device_acknowledged": false}`. This confirms dispatch, not execution on the phone. Failures raise `ControlError` with `code` and `outcome` (`not_sent`, `partial`, or `unknown`). An interrupted session never reconnects or replays input automatically; create a new session only after checking the phone. Closing releases control and cancels unsent input. Device input is best effort without execution acknowledgments; input already transmitted may continue or overlap later actions on the phone.
+
+The multi-step examples below use an exclusive `clicker` context. For direct protocol access use `clicker.control.request(method, params)`. Discover the endpoint with `GET /clicker/v1/{device_id}/control`; method schemas are at `GET /clicker/v1/control-schema`. HTTP command endpoints and the WebSocket contract are both available. SDK 0.2 raises errors instead of returning an unchecked failure dictionary, so a failed command stops the caller’s workflow. Typing is bounded to 180 seconds per command.
 
 ### Double tap
 

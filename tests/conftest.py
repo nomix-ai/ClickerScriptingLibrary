@@ -12,14 +12,14 @@ class FakeClicker:
 
     def click(self, coords, duration=100):
         self.clicked.append(coords)
-        return {"success": True}
+        return {"status": "sent", "device_acknowledged": False}
 
     def type(self, text):
         self.typed.append(text)
-        return {"success": True}
+        return {"status": "sent", "device_acknowledged": False}
 
     def swipe(self, *args, **kwargs):
-        return {"success": True}
+        return {"status": "sent", "device_acknowledged": False}
 
 
 @pytest.fixture

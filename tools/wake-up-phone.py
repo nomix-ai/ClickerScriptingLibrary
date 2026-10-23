@@ -65,8 +65,8 @@ def wake_up_the_phone(clicker: Clicker) -> None:
 
 
 def main():
-    clicker = Clicker(DEVICE_ID)
-    wake_up_the_phone(clicker)
+    with Clicker(DEVICE_ID) as clicker:
+        wake_up_the_phone(clicker)
 
 
 if __name__ == '__main__':
