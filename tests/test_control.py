@@ -66,7 +66,7 @@ class Server:
                     for target in targets:
                         socket.send(json.dumps({"jsonrpc": "2.0", "id": target["id"], "result": {
                             "status": "sent", "device_acknowledged": False, "method": target["method"],
-                            **({"text_timeout_ms": 4682000} if self.mode == "timing" else {}),
+                            **({"text_timeout_ms": 240000} if self.mode == "timing" else {}),
                         }}))
         except ConnectionClosed:
             pass
@@ -179,7 +179,7 @@ def test_interrupted_send_closes_the_session_and_cannot_be_retried(service):
 
 
 def test_text_timing_from_a_control_state_is_used_without_local_estimates():
-    assert text_timeout_seconds({'text_timeout_ms': 4682000}) == 4682
+    assert text_timeout_seconds({'text_timeout_ms': 240000}) == 240
 
 
 
@@ -188,8 +188,8 @@ def test_acquire_response_supplies_timing_without_overwriting_newer_state(servic
     fixture.mode = 'timing'
     client.state = {'online': False}
     result = client.request('control.acquire')
-    assert result['text_timeout_ms'] == 4682000
-    assert client.state == {'online': False, 'text_timeout_ms': 4682000}
+    assert result['text_timeout_ms'] == 240000
+    assert client.state == {'online': False, 'text_timeout_ms': 240000}
 
 
 
@@ -200,7 +200,7 @@ def test_raw_text_request_uses_the_acquired_servers_budget(service):
     future = Future()
     with patch('nomix_clicker.control.Future', return_value=future), patch.object(future, 'result', wraps=future.result) as wait:
         client.request('keyboard/type', {'text': 'a' * 10000})
-    wait.assert_called_once_with(timeout=4682.3)
+    wait.assert_called_once_with(timeout=240.3)
     assert fixture.messages[-1]['params']['text'] == 'a' * 10000
 
 

@@ -12,7 +12,7 @@ def http():
     response = MagicMock(status_code=200)
     response.json.return_value = {'success': True, 'status': 'sent', 'device_acknowledged': False}
     discovery = MagicMock(status_code=200)
-    discovery.json.return_value = {'text_timeout_ms': 4682000}
+    discovery.json.return_value = {'text_timeout_ms': 240000}
     with patch.object(api_helper.session, 'get', return_value=discovery), patch.object(api_helper.session, 'post', return_value=response) as post, patch.object(api_helper, 'get_api_url', return_value='https://node.invalid/clicker/v1'):
         yield post, response
 
@@ -84,13 +84,12 @@ def test_http_typing_uses_server_timing_before_sending_the_text(http):
     post, _ = http
     Clicker('Device').type('a' * 10000)
     assert post.call_count == 1
-    assert post.call_args.kwargs['timeout'] == 4692
-    assert post.call_args.kwargs['timeout'] > 150 + 625 * .15
+    assert post.call_args.kwargs['timeout'] == 250
     api_helper.type_text('Device', 'a' * 10000)
-    assert post.call_args.kwargs['timeout'] == 4712
+    assert post.call_args.kwargs['timeout'] == 270
 
 
-@pytest.mark.parametrize('budget', [None, True, '4682000', 0, -1, float('nan'), float('inf')])
+@pytest.mark.parametrize('budget', [None, True, '240000', 0, -1, float('nan'), float('inf')])
 def test_invalid_text_timing_never_sends_input(http, budget):
     post, _ = http
     response = MagicMock(status_code=200)
@@ -123,4 +122,4 @@ def test_closed_clicker_never_discovers_or_sends_typing(http):
 def test_raw_typing_without_an_explicit_deadline_also_uses_server_timing(http):
     post, _ = http
     api_helper.send_command('Device', 'keyboard/type', {'text': 'hello'})
-    assert post.call_args.kwargs['timeout'] == 4712
+    assert post.call_args.kwargs['timeout'] == 270
