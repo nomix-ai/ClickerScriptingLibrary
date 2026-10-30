@@ -2,14 +2,19 @@
 
 import asyncio
 import socket
+import ssl
+from collections.abc import Callable
+from functools import partial
+from threading import get_ident
 from time import monotonic, sleep
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
 import requests
 
-from nomix_clicker import Clicker, api_helper, upload_media
+from nomix_clicker import Clicker, api_helper, media_http, upload_media
 from nomix_clicker import actions as actions_mod
 
 QUEUED = {"id": "m-1", "kind": "photo", "filename": "a.jpg", "status": "queued"}
@@ -54,6 +59,23 @@ def capture_upload(method: str, path: str, timeout: float, data: aiohttp.FormDat
     writer = AsyncMock()
     asyncio.run(data().write(writer))
     return {**QUEUED, "body": b"".join(call.args[0] for call in writer.write.await_args_list)}
+
+
+def check_loop_thread(operation: Callable, owner: int, *args: Any) -> Any:
+    assert get_ident() == owner
+    return operation(*args)
+
+
+def thread_checked_loop() -> asyncio.AbstractEventLoop:
+    loop = asyncio.SelectorEventLoop()
+    owner = get_ident()
+    loop.run_until_complete = partial(check_loop_thread, loop.run_until_complete, owner)
+    loop.close = partial(check_loop_thread, loop.close, owner)
+    return loop
+
+
+async def media_request_in_running_loop() -> dict:
+    return media_http.media_request("GET", "/dev/media", 1)
 
 
 def test_waits_until_saved(monkeypatch):
@@ -146,3 +168,39 @@ def test_send_media_posts_multipart(monkeypatch, tmp_path):
     assert b"\xff\xd8\xff" in result["body"]
     assert request.call_args.args[:2] == ("POST", "/dev/media")
     assert 0 < request.call_args.args[2] <= 300
+
+
+@pytest.mark.parametrize("running_loop", [False, True])
+def test_media_loop_thread_ownership(monkeypatch, running_loop):
+    monkeypatch.setattr(asyncio, "new_event_loop", thread_checked_loop)
+    monkeypatch.setattr(media_http, "fetch_media", AsyncMock(return_value=QUEUED))
+    if running_loop:
+        result = asyncio.run(media_request_in_running_loop())
+    else:
+        result = media_http.media_request("GET", "/dev/media", 1)
+    assert result == QUEUED
+
+
+@pytest.mark.parametrize("setting", ["requests", "curl", "precedence", "empty", "default"])
+def test_media_ca_bundle(monkeypatch, tmp_path, setting):
+    certificate = ssl.create_default_context(cafile=requests.certs.where()).get_ca_certs(binary_form=True)[0]
+    bundle = tmp_path / "ca.pem"
+    bundle.write_text(ssl.DER_cert_to_PEM_cert(certificate))
+    monkeypatch.delenv("REQUESTS_CA_BUNDLE", raising=False)
+    monkeypatch.delenv("CURL_CA_BUNDLE", raising=False)
+    if setting in ("requests", "precedence"):
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(bundle))
+    if setting in ("curl", "empty"):
+        monkeypatch.setenv("CURL_CA_BUNDLE", str(bundle))
+    if setting == "precedence":
+        monkeypatch.setenv("CURL_CA_BUNDLE", str(tmp_path / "missing.pem"))
+    if setting == "empty":
+        monkeypatch.setenv("REQUESTS_CA_BUNDLE", "")
+    fetch = AsyncMock(return_value=QUEUED)
+    monkeypatch.setattr(media_http, "fetch_media", fetch)
+    assert media_http.media_request("GET", "/dev/media", 1) == QUEUED
+    context = fetch.call_args.args[-1]
+    if setting == "default":
+        assert context is True
+    else:
+        assert context.get_ca_certs(binary_form=True) == [certificate]
