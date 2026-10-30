@@ -1,12 +1,19 @@
+import logging
 import math
 import random
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import monotonic, sleep
 
+import requests
+
+from .api_helper import delete_media, list_media, send_media
 from .clicker import Clicker
-from .media_upload import MediaUpload
 from .recognition import Screen, parse_screen
+
+logger = logging.getLogger(__name__)
+
+MEDIA_POLL_TIMEOUT = 15.0
+MEDIA_CLEANUP_TIMEOUT = 5.0
 
 
 def open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Screen | None:
@@ -182,6 +189,17 @@ def post_comment(
     return bool(clicker.click(submit_coords).get("success"))
 
 
+def media_error_detail(error: requests.RequestException) -> str:
+    if error.response is None:
+        return str(error)
+    try:
+        body = error.response.json()
+    except ValueError:
+        body = None
+    detail = body.get("detail") if isinstance(body, dict) else None
+    return f"HTTP {error.response.status_code}: {detail or error.response.reason}"
+
+
 def upload_media(
         clicker: Clicker,
         path: str | Path,
@@ -193,10 +211,10 @@ def upload_media(
     NMX Viewer must be broadcasting on the phone — it collects the file from
     the device's queue and saves it, so it becomes the newest item in Photos.
 
-    `timeout` is the total budget in seconds, including upload, polling and
-    withdrawal. Up to 10% (at most 5 seconds) is reserved for withdrawing a
-    queued file on failure. Withdrawal is best effort: if it fails or the
-    upload response is lost, the file may still appear in Photos later.
+    `timeout` covers uploading and waiting for Photos together. On timeout,
+    withdrawing a queued file can take up to 5 additional seconds. Withdrawal
+    is best effort: if it fails or the upload response is lost, the file may
+    still appear in Photos later.
 
     Returns the saved item or None on failure or timeout. Zero timeout skips
     the upload. Negative or non-finite timeout, or non-positive/non-finite
@@ -209,13 +227,47 @@ def upload_media(
         raise ValueError("interval must be finite and positive")
     if timeout == 0:
         return None
-    path = Path(path)
-    with path.open("rb") as handle:
-        upload = MediaUpload(clicker.device_id, path, handle, timeout, interval, deadline)
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(upload.run)
+    name = Path(path).name
+    logger.info("Uploading '%s'...", name)
+    try:
+        item = send_media(clicker.device_id, path, timeout=max(0, deadline - monotonic()))
+    except requests.RequestException as error:
+        logger.error("Upload of '%s' failed: %s", name, media_error_detail(error))
+        if error.response is None:
+            logger.warning("No media ID received for '%s'; if the server accepted it, it may still appear in Photos", name)
+        return None
+
+    media_id = item.get("id")
+    if not media_id:
+        logger.error("No media ID received for '%s'; the file may still appear in Photos", name)
+        return None
+    logger.info("Waiting for the phone to save '%s'...", name)
+    try:
+        while item.get("status") not in ("saved", "failed"):
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                break
+            sleep(min(interval, remaining))
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                break
             try:
-                return future.result()
-            except KeyboardInterrupt:
-                upload.cancel()
-                raise
+                items = list_media(clicker.device_id, timeout=min(MEDIA_POLL_TIMEOUT, remaining)).get("items", [])
+            except requests.RequestException as error:
+                logger.warning("Media status check failed (%s), retrying", media_error_detail(error))
+                continue
+            item = next((entry for entry in items if entry.get("id") == media_id), item)
+        if item.get("status") == "saved" and monotonic() <= deadline:
+            logger.info("'%s' saved to Photos", name)
+            return item
+        if item.get("status") == "failed":
+            logger.error("The phone could not save '%s': %s", name, item.get("error"))
+        else:
+            logger.error("'%s' was not saved within %.3gs", name, timeout)
+        return None
+    finally:
+        if item.get("status") == "queued":
+            try:
+                delete_media(clicker.device_id, media_id, timeout=MEDIA_CLEANUP_TIMEOUT)
+            except requests.RequestException as error:
+                logger.warning("Could not withdraw '%s' (%s), it may still appear in Photos", name, media_error_detail(error))

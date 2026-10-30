@@ -1,9 +1,12 @@
 import mimetypes
 from pathlib import Path
+from time import monotonic
 
+import aiohttp
 import requests
 
 from .environment import get_api_key, get_api_url
+from .media_http import media_request
 
 # API reference: https://panel.nomixclicker.com/docs
 
@@ -192,7 +195,7 @@ def get_screenshot(device_id):
     return None
 
 
-def send_media(device_id, path):
+def send_media(device_id: str, path: str | Path, timeout: float = 300) -> dict:
     """Send a photo (JPEG, PNG, HEIC) or video (MP4, MOV) to the device's Photos.
 
     The file waits in the device's queue until NMX Viewer, broadcasting on the
@@ -201,22 +204,20 @@ def send_media(device_id, path):
     Args:
         device_id: Device ID
         path: Path to the local file (max 500 MB)
+        timeout: Total request budget in seconds
     Returns:
         dict with id, kind, filename, sha256, size, status ("queued"), created_at
     """
+    deadline = monotonic() + timeout
     path = Path(path)
     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     with path.open("rb") as f:
-        response = session.post(
-            f"{get_api_url()}/{device_id}/media",
-            files={"file": (path.name, f, content_type)},
-            timeout=300,
-        )
-    response.raise_for_status()
-    return response.json()
+        data = aiohttp.FormData()
+        data.add_field("file", f, filename=path.name, content_type=content_type)
+        return media_request("POST", f"/{device_id}/media", deadline - monotonic(), data=data)
 
 
-def list_media(device_id):
+def list_media(device_id: str, timeout: float = 15) -> dict:
     """List the latest files sent to the device, newest first.
 
     Args:
@@ -224,21 +225,17 @@ def list_media(device_id):
     Returns:
         dict with items[] (each queued, saved or failed) and max_bytes
     """
-    response = session.get(f"{get_api_url()}/{device_id}/media", timeout=15)
-    response.raise_for_status()
-    return response.json()
+    return media_request("GET", f"/{device_id}/media", timeout)
 
 
-def delete_media(device_id, media_id):
+def delete_media(device_id: str, media_id: str, timeout: float = 15) -> dict:
     """Withdraw a file the phone has not collected yet.
 
     Args:
         device_id: Device ID
         media_id: Media ID returned by send_media()
     """
-    response = session.delete(f"{get_api_url()}/{device_id}/media/{media_id}", timeout=15)
-    response.raise_for_status()
-    return response.json()
+    return media_request("DELETE", f"/{device_id}/media/{media_id}", timeout)
 
 
 def run_agent(device_id, task):

@@ -102,9 +102,9 @@ if item:
 ```
 
 NMX Viewer must be broadcasting on the phone — it collects the file from the
-device's queue. `timeout` (default 300 seconds) covers the entire call:
-upload, waiting for Photos, and withdrawal on failure. Up to 10% of that
-budget (at most 5 seconds) is reserved for withdrawing a queued file.
+device's queue. `timeout` (default 300 seconds) covers uploading and waiting
+for Photos together. On timeout, withdrawing a queued file can take up to
+5 additional seconds.
 Withdrawal is best effort: if it fails, or the upload response is lost
 before its media ID is received, the file may still appear in Photos later.
 A zero timeout skips uploading; negative or non-finite timeouts and
