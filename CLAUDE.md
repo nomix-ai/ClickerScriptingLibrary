@@ -195,8 +195,10 @@ upload_media(clicker: Clicker, path: str | Path, timeout: float = 300, interval:
 # Returns the media item ({id, kind, filename, sha256, size, status, ...})
 # once saved; the file is then the newest item in Photos, ready to post.
 # Returns None if the upload is rejected (413/415/429), the phone fails to
-# save it, or `timeout` passes after the upload — on timeout the file is withdrawn
-# from the queue. A missing local file raises FileNotFoundError.
+# save it, or the total `timeout` budget expires (upload + polling + withdrawal).
+# Up to 10% (max 5s) is reserved for best-effort withdrawal; a failed withdrawal
+# or a lost upload response can leave the file queued. Zero timeout skips upload.
+# A missing local file raises FileNotFoundError.
 ```
 
 ### Agent (autonomous AI)

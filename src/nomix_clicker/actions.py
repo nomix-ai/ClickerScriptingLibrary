@@ -1,11 +1,11 @@
+import math
 import random
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import monotonic, sleep
 
-import requests
-
-from .api_helper import delete_media, list_media, send_media
 from .clicker import Clicker
+from .media_upload import MediaUpload
 from .recognition import Screen, parse_screen
 
 
@@ -182,18 +182,6 @@ def post_comment(
     return bool(clicker.click(submit_coords).get("success"))
 
 
-def _error_detail(e: requests.RequestException) -> str:
-    response = getattr(e, "response", None)
-    if response is None:
-        return str(e)
-    try:
-        body = response.json()
-    except ValueError:
-        body = None
-    detail = body.get("detail") if isinstance(body, dict) else None
-    return f"HTTP {response.status_code}: {detail or response.reason}"
-
-
 def upload_media(
         clicker: Clicker,
         path: str | Path,
@@ -205,40 +193,29 @@ def upload_media(
     NMX Viewer must be broadcasting on the phone — it collects the file from
     the device's queue and saves it, so it becomes the newest item in Photos.
 
-    Returns the media item once saved, or None if the upload was rejected,
-    the phone failed to save it, or it wasn't saved `timeout` seconds after
-    the upload. On timeout the file is withdrawn from the queue so it can't
-    land in Photos later. A missing local file raises FileNotFoundError.
+    `timeout` is the total budget in seconds, including upload, polling and
+    withdrawal. Up to 10% (at most 5 seconds) is reserved for withdrawing a
+    queued file on failure. Withdrawal is best effort: if it fails or the
+    upload response is lost, the file may still appear in Photos later.
+
+    Returns the saved item or None on failure or timeout. Zero timeout skips
+    the upload. Negative or non-finite timeout, or non-positive/non-finite
+    interval, raises ValueError. A missing file raises FileNotFoundError.
     """
-    name = Path(path).name
-    print(f"Uploading '{name}'...")
-    try:
-        item = send_media(clicker.device_id, path)
-    except requests.RequestException as e:
-        print(f"ERROR: upload of '{name}' rejected: {_error_detail(e)}")
-        return None
-
-    media_id = item.get("id")
     deadline = monotonic() + timeout
-    print(f"Waiting for the phone to save '{name}'...")
-    while item.get("status") not in ("saved", "failed"):
-        if monotonic() >= deadline:
-            print(f"ERROR: '{name}' was not saved within {timeout:.0f}s — withdrawing it")
-            try:
-                delete_media(clicker.device_id, media_id)
-            except requests.RequestException as e:
-                print(f"WARNING: could not withdraw '{name}' ({_error_detail(e)}) — it may still appear in Photos")
-            return None
-        sleep(interval)
-        try:
-            items = list_media(clicker.device_id).get("items", [])
-        except requests.RequestException as e:
-            print(f"WARNING: media status check failed ({_error_detail(e)}) — retrying...")
-            continue
-        item = next((i for i in items if i.get("id") == media_id), item)
-
-    if item["status"] == "failed":
-        print(f"ERROR: the phone could not save '{name}': {item.get('error')}")
+    if not math.isfinite(timeout) or timeout < 0:
+        raise ValueError("timeout must be finite and non-negative")
+    if not math.isfinite(interval) or interval <= 0:
+        raise ValueError("interval must be finite and positive")
+    if timeout == 0:
         return None
-    print(f"'{name}' saved to Photos.")
-    return item
+    path = Path(path)
+    with path.open("rb") as handle:
+        upload = MediaUpload(clicker.device_id, path, handle, timeout, interval, deadline)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(upload.run)
+            try:
+                return future.result()
+            except KeyboardInterrupt:
+                upload.cancel()
+                raise
