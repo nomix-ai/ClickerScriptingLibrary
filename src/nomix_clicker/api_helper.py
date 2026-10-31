@@ -1,8 +1,6 @@
-import mimetypes
 from pathlib import Path
 from time import monotonic
 
-import aiohttp
 import requests
 
 from .environment import get_api_key, get_api_url
@@ -210,11 +208,8 @@ def send_media(device_id: str, path: str | Path, timeout: float = 300) -> dict:
     """
     deadline = monotonic() + timeout
     path = Path(path)
-    content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    with path.open("rb") as f:
-        data = aiohttp.FormData()
-        data.add_field("file", f, filename=path.name, content_type=content_type)
-        return media_request("POST", f"/{device_id}/media", deadline - monotonic(), data=data)
+    path.stat()
+    return media_request("POST", f"/{device_id}/media", deadline - monotonic(), file=path)
 
 
 def list_media(device_id: str, timeout: float = 15) -> dict:

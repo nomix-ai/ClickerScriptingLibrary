@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 license = "MIT"
 authors = [{ name = "Nixon - FZCO" }]
 keywords = ["automation", "ios", "clicker", "nomix", "ui-automation", "device-automation"]
-dependencies = ["requests>=2.32", "aiohttp==3.14.5"]
+dependencies = ["requests>=2.32", "pycurl==7.49.0"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

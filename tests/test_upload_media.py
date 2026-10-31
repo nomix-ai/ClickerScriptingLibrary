@@ -1,16 +1,17 @@
 """upload_media and the media endpoints — network mocked."""
 
 import asyncio
-import socket
-import ssl
-from collections.abc import Callable
+import json
+import os
+from email.message import Message
 from functools import partial
-from threading import get_ident
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 from time import monotonic, sleep
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-import aiohttp
+import pycurl
 import pytest
 import requests
 
@@ -50,28 +51,77 @@ def stalled_request(*args: object, timeout: float, **kwargs: object) -> dict:
     raise requests.Timeout("stalled")
 
 
-def stalled_resolution(*args: object, **kwargs: object) -> list:
-    sleep(1)
-    return []
+def curl_options(client: MagicMock) -> dict[int, Any]:
+    return {call.args[0]: call.args[1] for call in client.setopt.call_args_list}
 
 
-def capture_upload(method: str, path: str, timeout: float, data: aiohttp.FormData) -> dict:
-    writer = AsyncMock()
-    asyncio.run(data().write(writer))
-    return {**QUEUED, "body": b"".join(call.args[0] for call in writer.write.await_args_list)}
+def complete_curl_request(client: MagicMock) -> None:
+    options = curl_options(client)
+    options[pycurl.WRITEDATA].write(json.dumps(QUEUED).encode())
+    options[pycurl.WRITEHEADER].write(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n")
 
 
-def check_loop_thread(operation: Callable, owner: int, *args: Any) -> Any:
-    assert get_ident() == owner
-    return operation(*args)
+def curl_response_info(option: int) -> int | str:
+    return 200 if option == pycurl.RESPONSE_CODE else "https://media.example/dev/media"
 
 
-def thread_checked_loop() -> asyncio.AbstractEventLoop:
-    loop = asyncio.SelectorEventLoop()
-    owner = get_ident()
-    loop.run_until_complete = partial(check_loop_thread, loop.run_until_complete, owner)
-    loop.close = partial(check_loop_thread, loop.close, owner)
-    return loop
+@pytest.fixture
+def curl_client(monkeypatch):
+    client = MagicMock()
+    client.__enter__.return_value = client
+    client.perform.side_effect = partial(complete_curl_request, client)
+    client.getinfo.side_effect = curl_response_info
+    monkeypatch.setattr(pycurl, "Curl", MagicMock(return_value=client))
+    monkeypatch.setattr(media_http, "get_api_key", lambda: "test-api-key")
+    return client
+
+
+class UploadHandler(BaseHTTPRequestHandler):
+    def log_message(self, *args: object) -> None:
+        pass
+
+    def do_POST(self) -> None:
+        self.server.methods.append("POST")
+        self.server.received = self.rfile.read(int(self.headers["Content-Length"]))
+        if self.path == "/dev/media" and self.server.redirect:
+            self.send_response(self.server.redirect)
+            self.send_header("Location", "/accepted")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        self.respond()
+
+    def do_GET(self) -> None:
+        self.server.methods.append("GET")
+        self.respond()
+
+    def respond(self) -> None:
+        body = json.dumps(QUEUED).encode()
+        self.send_response(201)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+@pytest.fixture
+def upload_server(monkeypatch):
+    server = ThreadingHTTPServer(("127.0.0.1", 0), UploadHandler)
+    server.daemon_threads = True
+    server.redirect = 0
+    server.methods = []
+    thread = Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+    thread.start()
+    monkeypatch.setattr(media_http, "get_api_url", lambda: f"http://127.0.0.1:{server.server_port}")
+    monkeypatch.setattr(media_http, "get_api_key", lambda: "test-api-key")
+    monkeypatch.setenv("NO_PROXY", "*")
+    monkeypatch.setenv("no_proxy", "*")
+    try:
+        yield server
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
 
 
 async def media_request_in_running_loop() -> dict:
@@ -114,16 +164,12 @@ def test_tolerates_transient_poll_errors(monkeypatch):
     assert upload_media(Clicker("dev"), "a.jpg", interval=0.001) == SAVED
 
 
-@pytest.mark.parametrize("stage", ["upload", "status", "sleep", "zero", "dns", "upload_time"])
+@pytest.mark.parametrize("stage", ["upload", "status", "sleep", "zero", "upload_time"])
 def test_timeout_withdraws_the_file(monkeypatch, stage):
     send = MagicMock(side_effect=stalled_request) if stage == "upload" else None
     send, list_, delete = _mock_media(monkeypatch, send=send)
     if stage == "status":
         list_.side_effect = stalled_request
-    if stage == "dns":
-        monkeypatch.setattr(actions_mod, "send_media", api_helper.send_media)
-        monkeypatch.setattr("nomix_clicker.media_http.get_api_url", lambda: "http://deadline.invalid")
-        monkeypatch.setattr(socket, "getaddrinfo", stalled_resolution)
     if stage == "upload_time":
         monkeypatch.setattr(actions_mod, "monotonic", MagicMock(side_effect=[0, 0, 80, 120]))
         monkeypatch.setattr(actions_mod, "sleep", MagicMock())
@@ -132,7 +178,7 @@ def test_timeout_withdraws_the_file(monkeypatch, stage):
     started = monotonic()
     assert upload_media(Clicker("dev"), "a.jpg", timeout=timeout, interval=interval) is None
     assert monotonic() - started < 0.5
-    if stage in ("upload", "zero", "dns"):
+    if stage in ("upload", "zero"):
         delete.assert_not_called()
     else:
         delete.assert_called_once_with("dev", "m-1", timeout=actions_mod.MEDIA_CLEANUP_TIMEOUT)
@@ -155,25 +201,24 @@ def test_timeout_survives_failed_withdraw(monkeypatch, error):
     assert monotonic() - started < 0.5
 
 
-def test_send_media_posts_multipart(monkeypatch, tmp_path):
-    photo = tmp_path / "beach.jpg"
+@pytest.mark.parametrize("filename", ["beach.jpg", "beach trip.jpg", "фото.jpg", "x+y.jpg"])
+def test_send_media_posts_multipart(upload_server, tmp_path, filename):
+    photo = tmp_path / filename
     photo.write_bytes(b"\xff\xd8\xff")
-    request = MagicMock(side_effect=capture_upload)
-    monkeypatch.setattr(api_helper, "media_request", request)
-
     result = api_helper.send_media("dev", photo)
     assert result["id"] == QUEUED["id"]
-    assert b'name="file"; filename="beach.jpg"' in result["body"]
-    assert b"Content-Type: image/jpeg" in result["body"]
-    assert b"\xff\xd8\xff" in result["body"]
-    assert request.call_args.args[:2] == ("POST", "/dev/media")
-    assert 0 < request.call_args.args[2] <= 300
+    body = upload_server.received
+    disposition = next(line for line in body.split(b"\r\n") if line.startswith(b"Content-Disposition:"))
+    header = Message()
+    header["Content-Disposition"] = disposition.decode("utf-8").split(": ", 1)[1]
+    assert header.get_filename() == filename.replace("\r", "%0D").replace("\n", "%0A")
+    assert b"Content-Type: image/jpeg" in body
+    assert b"\xff\xd8\xff" in body
 
 
 @pytest.mark.parametrize("running_loop", [False, True])
-def test_media_loop_thread_ownership(monkeypatch, running_loop):
-    monkeypatch.setattr(asyncio, "new_event_loop", thread_checked_loop)
-    monkeypatch.setattr(media_http, "fetch_media", AsyncMock(return_value=QUEUED))
+def test_media_request_calling_modes(monkeypatch, curl_client, running_loop):
+    monkeypatch.setattr(asyncio, "new_event_loop", MagicMock(side_effect=AssertionError("Transport must not create an event loop")))
     if running_loop:
         result = asyncio.run(media_request_in_running_loop())
     else:
@@ -181,14 +226,15 @@ def test_media_loop_thread_ownership(monkeypatch, running_loop):
     assert result == QUEUED
 
 
-@pytest.mark.parametrize("setting", ["requests", "curl", "precedence", "empty", "default"])
-def test_media_ca_bundle(monkeypatch, tmp_path, setting):
-    certificate = ssl.create_default_context(cafile=requests.certs.where()).get_ca_certs(binary_form=True)[0]
+@pytest.mark.parametrize("setting", ["requests", "curl", "precedence", "empty", "default", "directory"])
+def test_media_ca_bundle(monkeypatch, tmp_path, curl_client, setting):
     bundle = tmp_path / "ca.pem"
-    bundle.write_text(ssl.DER_cert_to_PEM_cert(certificate))
+    bundle.write_text("test CA bundle")
+    if setting == "directory":
+        bundle = tmp_path
     monkeypatch.delenv("REQUESTS_CA_BUNDLE", raising=False)
     monkeypatch.delenv("CURL_CA_BUNDLE", raising=False)
-    if setting in ("requests", "precedence"):
+    if setting in ("requests", "precedence", "directory"):
         monkeypatch.setenv("REQUESTS_CA_BUNDLE", str(bundle))
     if setting in ("curl", "empty"):
         monkeypatch.setenv("CURL_CA_BUNDLE", str(bundle))
@@ -196,11 +242,45 @@ def test_media_ca_bundle(monkeypatch, tmp_path, setting):
         monkeypatch.setenv("CURL_CA_BUNDLE", str(tmp_path / "missing.pem"))
     if setting == "empty":
         monkeypatch.setenv("REQUESTS_CA_BUNDLE", "")
-    fetch = AsyncMock(return_value=QUEUED)
-    monkeypatch.setattr(media_http, "fetch_media", fetch)
     assert media_http.media_request("GET", "/dev/media", 1) == QUEUED
-    context = fetch.call_args.args[-1]
-    if setting == "default":
-        assert context is True
+    options = curl_options(curl_client)
+    if setting == "directory":
+        assert options[pycurl.CAINFO] is None
+        assert options[pycurl.PROXY_CAINFO] is None
+        assert options[pycurl.CAPATH] == os.fsencode(bundle)
+        assert options[pycurl.PROXY_CAPATH] == os.fsencode(bundle)
     else:
-        assert context.get_ca_certs(binary_form=True) == [certificate]
+        expected = requests.certs.where() if setting == "default" else bundle
+        assert options[pycurl.CAINFO] == os.fsencode(expected)
+        assert options[pycurl.PROXY_CAINFO] == os.fsencode(expected)
+
+
+@pytest.mark.parametrize("setting", ["http", "https", "all", "bypass", "cidr", "credentials"])
+def test_media_proxy_settings(monkeypatch, curl_client, setting):
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(name.lower(), raising=False)
+    url = "http://192.0.2.1" if setting == "cidr" else "https://media.example"
+    proxy = "https://user:password@proxy.example:8443" if setting == "credentials" else "https://proxy.example:8443"
+    monkeypatch.setenv("ALL_PROXY" if setting == "all" else "HTTPS_PROXY", proxy)
+    if setting == "http":
+        url = "http://media.example"
+        monkeypatch.setenv("HTTP_PROXY", proxy)
+    if setting == "bypass":
+        monkeypatch.setenv("NO_PROXY", "media.example")
+    if setting == "cidr":
+        monkeypatch.setenv("HTTP_PROXY", proxy)
+        monkeypatch.setenv("NO_PROXY", "192.0.2.0/24")
+    monkeypatch.setattr(media_http, "get_api_url", lambda: url)
+    assert media_http.media_request("GET", "/dev/media", 1) == QUEUED
+    expected = "" if setting in ("bypass", "cidr") else proxy
+    assert curl_options(curl_client)[pycurl.PROXY] == expected.encode()
+
+
+@pytest.mark.parametrize("status", [301, 302, 307, 308])
+def test_media_upload_redirects(upload_server, tmp_path, status):
+    photo = tmp_path / "photo.jpg"
+    photo.write_bytes(b"photo")
+    upload_server.redirect = status
+    assert api_helper.send_media("dev", photo)["id"] == QUEUED["id"]
+    assert upload_server.methods == ["POST", "GET" if status in (301, 302) else "POST"]
