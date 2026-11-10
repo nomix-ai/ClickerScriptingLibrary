@@ -89,6 +89,11 @@ def double_tap(device_id, coords, duration=50, gap=100):
     return _post_action(f"{get_api_url()}/{device_id}/double-tap", payload)
 
 
+def swipe_direction(device_id: str, direction: str, distance: str, aspect_ratio: float) -> dict:
+    payload = {"direction": direction, "distance": distance, "aspect_ratio": aspect_ratio}
+    return _post_action(f"{get_api_url()}/{device_id}/swipe", payload)
+
+
 def move(device_id, start, end, is_pressed=False, duration=300):
     """Move mouse from start to end coordinates. Mouse released at end if pressed.
 
