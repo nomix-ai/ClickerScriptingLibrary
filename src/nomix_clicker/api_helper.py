@@ -63,19 +63,38 @@ def click(device_id, duration=300):
     return _post_action(f"{get_api_url()}/{device_id}/click", {"duration": duration})
 
 
-def tap(device_id, coords, duration=100):
+def tap_parameters(
+    coords: tuple[int, int], duration: int, randomize: bool, aspect_ratio: float | None,
+) -> dict[str, int | float]:
+    left, top = coords
+    params: dict[str, int | float] = {"left": left, "top": top, "duration": duration}
+    if randomize:
+        params["randomize"] = True
+        if aspect_ratio is not None:
+            params["aspect_ratio"] = aspect_ratio
+    return params
+
+
+def tap(
+    device_id: str, coords: tuple[int, int], duration: int = 100,
+    *, randomize: bool = False, aspect_ratio: float | None = None,
+) -> dict:
     """Move to coordinates and click in one call (with a device-settle delay).
 
     Args:
         device_id: Device ID
         coords: Tuple of (x, y) coordinates
         duration: Hold duration in milliseconds
+        randomize: Apply the server's tap variation
+        aspect_ratio: Screen width divided by height for randomized taps
     """
-    x, y = coords
-    return _post_action(f"{get_api_url()}/{device_id}/tap", {"left": x, "top": y, "duration": duration})
+    return _post_action(f"{get_api_url()}/{device_id}/tap", tap_parameters(coords, duration, randomize, aspect_ratio))
 
 
-def double_tap(device_id, coords, duration=50, gap=100):
+def double_tap(
+    device_id: str, coords: tuple[int, int], duration: int = 50, gap: int = 100,
+    *, randomize: bool = False, aspect_ratio: float | None = None,
+) -> dict:
     """Move to coordinates and double-tap with timing handled by the device.
 
     Args:
@@ -83,14 +102,22 @@ def double_tap(device_id, coords, duration=50, gap=100):
         coords: Tuple of (x, y) coordinates
         duration: Hold duration of each tap in milliseconds
         gap: Pause between taps in milliseconds
+        randomize: Apply the server's double-tap variation
+        aspect_ratio: Screen width divided by height for randomized taps
     """
-    x, y = coords
-    payload = {"left": x, "top": y, "duration": duration, "gap": gap}
+    payload = tap_parameters(coords, duration, randomize, aspect_ratio)
+    payload["gap"] = gap
     return _post_action(f"{get_api_url()}/{device_id}/double-tap", payload)
 
 
-def swipe_direction(device_id: str, direction: str, distance: str, aspect_ratio: float) -> dict:
-    payload = {"direction": direction, "distance": distance, "aspect_ratio": aspect_ratio}
+def swipe_direction(
+    device_id: str, direction: str, *, distance: str | None = None, aspect_ratio: float | None = None,
+) -> dict:
+    payload: dict[str, str | float] = {"direction": direction}
+    if distance is not None:
+        payload["distance"] = distance
+    if aspect_ratio is not None:
+        payload["aspect_ratio"] = aspect_ratio
     return _post_action(f"{get_api_url()}/{device_id}/swipe", payload)
 
 
