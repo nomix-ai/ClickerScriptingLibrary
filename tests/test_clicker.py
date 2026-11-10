@@ -56,7 +56,7 @@ def test_swipe_combines_directions(monkeypatch):
     ("options", "payload"),
     [
         ({}, {"direction": "up"}),
-        ({"distance": "short", "aspect_ratio": 2.16}, {"direction": "up", "distance": "short", "aspect_ratio": 2.16}),
+        ({"distance": "short"}, {"direction": "up", "distance": "short"}),
     ],
 )
 def test_directional_swipe_sends_profile_parameters(gesture_post: Mock, options: dict, payload: dict) -> None:
@@ -88,7 +88,6 @@ def test_swipe_rejects_parameters_from_the_other_mode(gesture_post: Mock, start:
     [
         ({}, {}),
         ({"randomize": True}, {"randomize": True}),
-        ({"randomize": True, "aspect_ratio": 2.16}, {"randomize": True, "aspect_ratio": 2.16}),
     ],
 )
 def test_tap_variation_is_an_opt_in_server_parameter(

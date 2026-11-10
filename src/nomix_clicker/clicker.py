@@ -35,7 +35,6 @@ class Clicker:
         /,
         *,
         distance: SwipeDistance | None = None,
-        aspect_ratio: float | None = None,
     ) -> dict: ...
 
     @overload
@@ -50,8 +49,6 @@ class Clicker:
 
         Pass a direction such as swipe("up", distance="short") for a
         randomized server gesture. The default distance is "normal".
-        The aspect ratio is screen width divided by height and defaults to
-        the server's portrait profile.
 
         Pass coordinates such as swipe((x, y), up=6000, duration=300)
         for a straight swipe with offsets in HID units and duration in ms.
@@ -66,7 +63,6 @@ class Clicker:
         duration: int = 100,
         *,
         randomize: bool = False,
-        aspect_ratio: float | None = None,
     ) -> dict:
         """Tap at coordinates (combined move+click in one call).
 
@@ -74,9 +70,8 @@ class Clicker:
             coords: Tap coordinates tuple (x, y)
             duration: Hold duration in milliseconds
             randomize: Apply the server's variation to position and hold duration
-            aspect_ratio: Screen width divided by height for randomized taps
         """
-        return tap(self.device_id, coords, duration=duration, randomize=randomize, aspect_ratio=aspect_ratio)
+        return tap(self.device_id, coords, duration=duration, randomize=randomize)
 
     def double_tap(
         self,
@@ -85,7 +80,6 @@ class Clicker:
         gap: int = 100,
         *,
         randomize: bool = False,
-        aspect_ratio: float | None = None,
     ) -> dict:
         """Double-tap at coordinates with timing handled by the device.
 
@@ -94,9 +88,8 @@ class Clicker:
             duration: Hold duration of each tap in milliseconds
             gap: Pause between taps in milliseconds
             randomize: Apply the server's variation to the shared position, hold duration, and pause
-            aspect_ratio: Screen width divided by height for randomized taps
         """
-        return double_tap(self.device_id, coords, duration=duration, gap=gap, randomize=randomize, aspect_ratio=aspect_ratio)
+        return double_tap(self.device_id, coords, duration=duration, gap=gap, randomize=randomize)
 
     def type(self, text: str):
         """Type text on the device.
