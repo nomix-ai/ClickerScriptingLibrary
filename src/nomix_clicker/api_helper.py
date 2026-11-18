@@ -2,6 +2,7 @@ from pathlib import Path
 from time import monotonic
 
 import requests
+from urllib3.exceptions import NewConnectionError
 
 from .environment import get_api_key, get_api_url
 from .media_http import media_request
@@ -34,15 +35,23 @@ def _post_action(url, payload=None, screen=False):
     try:
         response = session.post(url, json=payload, timeout=COMMAND_TIMEOUT)
         result = _parse_action_response(response)
-    except requests.ReadTimeout as e:
-        result = {"success": False, "message": str(e), "outcome": "unknown"}
     except requests.RequestException as e:
-        result = {"success": False, "message": str(e)}
+        result = {"success": False, "message": str(e), "outcome": _network_outcome(e)}
     # the AI quota is checked after the command has gone to the device
     if screen and result.get("status_code") == 429 and "outcome" not in result:
         result["outcome"] = "unknown"
     print({key: value for key, value in result.items() if key != "screen_state"})
     return result
+
+
+def _network_outcome(error: requests.RequestException) -> str:
+    """not_sent when the connection never opened, unknown once the request may have reached the server."""
+    reason = getattr(error.args[0], "reason", None) if error.args else None
+    if isinstance(error, (requests.ConnectTimeout, requests.exceptions.SSLError)) or isinstance(reason, NewConnectionError):
+        return "not_sent"
+    if isinstance(error, (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError)):
+        return "unknown"
+    return "not_sent"
 
 
 def get_devices():
@@ -382,8 +391,14 @@ def _parse_action_response(response):
     try:
         body = response.json()
     except ValueError:
-        # a 2xx with an unparseable body is still an accepted action
-        return {"success": response.ok, "message": f"Empty or invalid response (HTTP {response.status_code})"}
+        if response.ok:
+            # a 2xx with an unparseable body is still an accepted action
+            return {"success": True, "message": f"Empty or invalid response (HTTP {response.status_code})"}
+        result = _action_error(response.status_code, None)
+        if response.status_code >= 500:
+            # a proxy error page: the command may have reached the device
+            result["outcome"] = "unknown"
+        return result
     if response.ok:
         return body
     return _action_error(response.status_code, body)

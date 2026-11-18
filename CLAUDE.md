@@ -107,7 +107,7 @@ clicker.get_screenshot() -> bytes | None
 
 Under the hood `Clicker.click` calls `POST /{device_id}/tap` (combined move+click with a device-settle delay), `double_tap` calls `POST /{device_id}/double-tap` (both taps timed locally by the device), and coordinate `swipe` calls `POST /{device_id}/move` (absolute coordinate movement). The server answers an action once it is sent to the device, not when the device finishes it.
 
-Action methods don't raise — they return `{"success": True, "message": str, ...}`, or on failure `{"success": False, "message": str}` plus `status_code` (when the server refused the command) and the server's `code` and `outcome`. `outcome` is `not_sent` (nothing reached the device; safe to retry), `partial` or `unknown` (the device may have run some or all of it; check the screen before retrying). A timed-out request and an AI quota refusal of a `screen=True` action also report `unknown`.
+Action methods don't raise — they return `{"success": True, "message": str, ...}`, or on failure `{"success": False, "message": str}` plus `status_code` (for any HTTP error response), the server's `code`, and `outcome` when known. `outcome` is `not_sent` (nothing reached the device; safe to retry), `partial` or `unknown` (the device may have run some or all of it; check the screen before retrying). Network errors always carry one: `not_sent` when the connection never opened, `unknown` for a timeout or a connection dropped mid-request. A proxy error page (5xx without JSON) and an AI quota refusal of a `screen=True` action also report `unknown`.
 
 `screen=True` makes the server wait for the action to play out and add a fresh `screen_state` (one AI recognition request, counted against the quota) to the result; it is `None` when no frame arrived in time. `Screen.from_dict(result["screen_state"])` turns it into a `Screen`.
 
@@ -166,7 +166,7 @@ open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Screen | None
 # Returns the parsed screen once the app is in front, or None — check `if not screen:`.
 
 close_app(clicker: Clicker, retries: int = 3) -> bool
-# Opens app switcher, dismisses the last app card, taps home.
+# Opens app switcher, dismisses the last app card, taps home (held 200 ms, as the agent does).
 # Returns True once the Home Screen is confirmed, False otherwise.
 
 find_and_click(clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool
@@ -293,7 +293,7 @@ get_active_agent_task(device_id)                            # GET /{id}/agent (N
 | 400 | Command: parameters can't be executed on the device |
 | 401 | Invalid API key |
 | 403 | Device belongs to another user; command: control permission denied |
-| 404 | Device not connected |
+| 404 | Device does not exist; agent: no active task; screenshot/screen-state: no frame |
 | 409 | Agent: device already has a running task; command: interrupted |
 | 413 | Media: file is over 500 MB |
 | 415 | Media: file is not JPEG, PNG, HEIC, MP4 or MOV |

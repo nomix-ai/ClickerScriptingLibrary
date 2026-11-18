@@ -2,7 +2,9 @@
 
 from unittest.mock import MagicMock
 
+import pytest
 import requests
+from urllib3.exceptions import MaxRetryError, NewConnectionError
 
 from nomix_clicker import api_helper
 from nomix_clicker.api_helper import _parse_action_response
@@ -78,9 +80,32 @@ def test_run_agent_sends_timezone_only_when_given(monkeypatch):
     ]
 
 
-def test_read_timeout_leaves_the_outcome_unknown(monkeypatch):
-    monkeypatch.setattr(api_helper.session, "post", MagicMock(side_effect=requests.ReadTimeout("slow")))
-    assert api_helper._post_action("http://x/tap")["outcome"] == "unknown"
+@pytest.mark.parametrize(
+    ("error", "outcome"),
+    [
+        (requests.ReadTimeout("slow"), "unknown"),
+        (requests.ConnectionError("Connection aborted: RemoteDisconnected"), "unknown"),
+        (requests.exceptions.ChunkedEncodingError("cut"), "unknown"),
+        (requests.ConnectTimeout("no route"), "not_sent"),
+        (requests.ConnectionError(MaxRetryError(None, "/", NewConnectionError(None, "refused"))), "not_sent"),
+    ],
+)
+def test_network_errors_say_whether_the_command_may_have_gone_out(monkeypatch, error, outcome):
+    monkeypatch.setattr(api_helper.session, "post", MagicMock(side_effect=error))
+    assert api_helper._post_action("http://x/tap")["outcome"] == outcome
+
+
+def test_proxy_error_page_keeps_the_status_and_an_unknown_outcome():
+    assert _parse_action_response(_Resp(raises=True, status=504)) == {
+        "success": False, "message": "HTTP 504", "status_code": 504, "outcome": "unknown",
+    }
+
+
+def test_get_stream_returns_the_livekit_session(monkeypatch):
+    post = MagicMock(return_value=_Resp(data={"url": "wss://n/livekit", "token": "t"}, status=200))
+    monkeypatch.setattr(api_helper.session, "post", post)
+    assert api_helper.get_stream("dev") == {"url": "wss://n/livekit", "token": "t"}
+    assert post.call_args.args[0].endswith("/dev/stream")
 
 
 def test_ai_quota_refusal_after_dispatch_leaves_the_outcome_unknown(monkeypatch):

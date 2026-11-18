@@ -84,8 +84,8 @@ if not result["success"]:
     print(result["message"], result.get("outcome"))
 ```
 
-Before 0.2.0 a refusal came back as the server's raw `{"detail": ...}`; read
-`message`, `code` and `outcome` instead.
+An action waits up to 250 seconds for the server, which queues a command
+while the device is busy and types for up to 180 seconds.
 
 Pass `screen=True` to any action to get the screen right after it has played
 out, in one request (one AI recognition request, counted against the quota):
@@ -94,9 +94,19 @@ out, in one request (one AI recognition request, counted against the quota):
 from nomix_clicker import Screen
 
 result = clicker.click((16383, 30000), screen=True)
-if result["success"] and result["screen_state"]:
+if result.get("screen_state"):
     print(Screen.from_dict(result["screen_state"]).app_name)
 ```
+
+### Upgrading from 0.1
+
+- A refused action returns `message`, `status_code`, `code` and `outcome`
+  instead of the server's raw `{"detail": ...}`.
+- Actions wait up to 250 seconds instead of 30 (`restart` 60).
+- `open_app` goes Home (Cmd+H), opens Spotlight with Cmd+Space, types the name
+  and presses Enter, as the AI agent does; it no longer taps a recognized
+  result or calls `close_app` between attempts.
+- `close_app` holds its final tap for 200 ms.
 
 ### Double tap
 
