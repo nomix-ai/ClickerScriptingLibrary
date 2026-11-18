@@ -15,35 +15,56 @@ logger = logging.getLogger(__name__)
 MEDIA_POLL_TIMEOUT = 15.0
 MEDIA_CLEANUP_TIMEOUT = 5.0
 
+HOME_COMBO = ["MetaLeft", "KeyH"]
+SPOTLIGHT_COMBO = ["MetaLeft", "Space"]
+SELECT_ALL_COMBO = ["MetaLeft", "KeyA"]
+# Shorter waits miss Spotlight about a third of the time.
+HOME_SETTLE_S = 2.0
+SPOTLIGHT_SETTLE_S = 3.0
+TYPED_SETTLE_S = 3.0
+INPUT_GAP_S = 0.4
+APP_SETTLE_S = 2.0
+CLOSE_APP_TAP_MS = 200
+
+
+def _launch_from_spotlight(clicker: Clicker, app_name: str) -> bool:
+    # Cmd+Space toggles Spotlight, so start from the Home Screen.
+    for codes, settle in (
+        (HOME_COMBO, HOME_SETTLE_S),
+        (SPOTLIGHT_COMBO, SPOTLIGHT_SETTLE_S),
+        (SELECT_ALL_COMBO, INPUT_GAP_S),
+        (["Backspace"], INPUT_GAP_S),
+    ):
+        if not clicker.key_combo(codes).get("success"):
+            return False
+        sleep(settle)
+    if not clicker.type(app_name).get("success"):
+        return False
+    sleep(TYPED_SETTLE_S)
+    if not clicker.key_combo(["Enter"]).get("success"):
+        return False
+    sleep(APP_SETTLE_S)
+    return True
+
 
 def open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Screen | None:
-    """Open any app via iOS Spotlight search. Retries up to `retries` times.
+    """Open any app via iOS Spotlight from any screen. Retries up to `retries` times.
 
-    Returns the parsed screen on success, or None on failure.
+    Goes Home (Cmd+H), opens Spotlight (Cmd+Space), replaces its query with
+    `app_name` and presses Enter — the same sequence the AI agent uses.
+    Returns the parsed screen once `app_name` is in the foreground, or None.
     """
     for attempt in range(1, retries + 1):
-        print(f"Opening Spotlight (attempt {attempt}/{retries})...")
-        clicker.swipe((16000, 10000), down=8000, duration=300)
-        sleep(0.5)
-
-        print(f"Typing '{app_name}'...")
-        clicker.type(app_name)
-        sleep(2)
-
-        screen = parse_screen(clicker)
-        if not screen or not screen.find_and_click(clicker, app_name):
-            print(f"WARNING: '{app_name}' not found in Spotlight results")
-            close_app(clicker)
+        print(f"Opening '{app_name}' via Spotlight (attempt {attempt}/{retries})...")
+        if not _launch_from_spotlight(clicker, app_name):
+            print("WARNING: the Clicker did not accept a Spotlight step")
             continue
-
-        sleep(3)
 
         screen = parse_screen(clicker)
         if screen and app_name.lower() in screen.app_name.lower():
             return screen
 
         print(f"WARNING: '{app_name}' did not open (current app: '{screen.app_name if screen else 'None'}')")
-        close_app(clicker)
 
     print(f"ERROR: Failed to open '{app_name}' after {retries} attempts.")
     return None
@@ -58,7 +79,7 @@ def _do_close_app(clicker: Clicker) -> None:
     clicker.swipe((26500, 20000), up=10000, duration=300)
     sleep(5)
     # Tap home area to exit app switcher
-    clicker.click((16384, 30000), duration=100)
+    clicker.click((16384, 30000), duration=CLOSE_APP_TAP_MS)
 
 
 def close_app(clicker: Clicker, retries: int = 3) -> bool:

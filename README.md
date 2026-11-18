@@ -70,6 +70,34 @@ if screen:
     print(screen.description)      # what the AI recognizer sees on screen
 ```
 
+### Action results
+
+Actions never raise. Each returns a dict whose `success` says whether the
+server sent it to the device; a refused action carries the server's
+`message`, `status_code` and, for device commands, an `outcome` —
+`not_sent` is safe to retry, `partial` or `unknown` means the device may have
+acted, so look at the screen first:
+
+```python
+result = clicker.type("Hello")
+if not result["success"]:
+    print(result["message"], result.get("outcome"))
+```
+
+Before 0.2.0 a refusal came back as the server's raw `{"detail": ...}`; read
+`message`, `code` and `outcome` instead.
+
+Pass `screen=True` to any action to get the screen right after it has played
+out, in one request (one AI recognition request, counted against the quota):
+
+```python
+from nomix_clicker import Screen
+
+result = clicker.click((16383, 30000), screen=True)
+if result["success"] and result["screen_state"]:
+    print(Screen.from_dict(result["screen_state"]).app_name)
+```
+
 ### Double tap
 
 Use `double_tap` when an app requires two taps close enough together to like,

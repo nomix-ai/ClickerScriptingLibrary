@@ -17,6 +17,19 @@ def test_execute_stores_and_returns_task_id(monkeypatch):
     assert a.current_task_id == "t-123"
 
 
+def test_run_passes_the_timezone_to_the_server(monkeypatch):
+    run_mock = MagicMock(return_value={"task_id": "t-1"})
+    monkeypatch.setattr(agent_mod, "run_agent", run_mock)
+    monkeypatch.setattr(agent_mod, "get_agent_task", MagicMock(return_value={"status": "completed", "result": "ok"}))
+    assert Agent("dev").run("task", timezone="Europe/Moscow") == "ok"
+    run_mock.assert_called_once_with("dev", "task", timezone="Europe/Moscow")
+
+
+def test_get_active_returns_the_running_task(monkeypatch):
+    monkeypatch.setattr(agent_mod, "get_active_agent_task", MagicMock(return_value=None))
+    assert Agent("dev").get_active() is None
+
+
 def test_get_status_without_task_id_raises():
     with pytest.raises(ValueError):
         Agent("dev").get_status()

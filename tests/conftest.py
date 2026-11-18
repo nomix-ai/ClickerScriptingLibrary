@@ -9,6 +9,7 @@ class FakeClicker:
     def __init__(self):
         self.clicked = []
         self.typed = []
+        self.combos = []
 
     def click(self, coords, duration=100):
         self.clicked.append(coords)
@@ -16,6 +17,10 @@ class FakeClicker:
 
     def type(self, text):
         self.typed.append(text)
+        return {"success": True}
+
+    def key_combo(self, codes):
+        self.combos.append(codes)
         return {"success": True}
 
     def swipe(self, *args, **kwargs):

@@ -8,6 +8,9 @@ from .media_http import media_request
 
 # API reference: https://panel.nomixclicker.com/docs
 
+# The server queues a command, or types for up to 180 s, within its 240 s command deadline.
+COMMAND_TIMEOUT = 250
+
 session = requests.Session()
 
 
@@ -20,14 +23,25 @@ def _auth(request):
 session.auth = _auth
 
 
-def _post_action(url, payload=None, timeout=30):
-    """POST to an action endpoint: never raises, network errors map to the fallback dict."""
+def _post_action(url, payload=None, screen=False):
+    """POST to an action endpoint: never raises, network errors map to the fallback dict.
+
+    With screen=True the server waits for the action to play out and adds a
+    fresh "screen_state" to the result (one AI recognition request).
+    """
+    if screen:
+        url += "?screen=true"
     try:
-        response = session.post(url, json=payload, timeout=timeout)
+        response = session.post(url, json=payload, timeout=COMMAND_TIMEOUT)
         result = _parse_action_response(response)
+    except requests.ReadTimeout as e:
+        result = {"success": False, "message": str(e), "outcome": "unknown"}
     except requests.RequestException as e:
         result = {"success": False, "message": str(e)}
-    print(result)
+    # the AI quota is checked after the command has gone to the device
+    if screen and result.get("status_code") == 429 and "outcome" not in result:
+        result["outcome"] = "unknown"
+    print({key: value for key, value in result.items() if key != "screen_state"})
     return result
 
 
@@ -50,17 +64,18 @@ def restart(device_id):
     Args:
         device_id: Device ID
     """
-    return _post_action(f"{get_api_url()}/{device_id}/restart", timeout=60)
+    return _post_action(f"{get_api_url()}/{device_id}/restart")
 
 
-def click(device_id, duration=300):
+def click(device_id, duration=300, *, screen=False):
     """Click at the current cursor position.
 
     Args:
         device_id: Device ID
         duration: Click duration in milliseconds
+        screen: Return a fresh screen_state after the click
     """
-    return _post_action(f"{get_api_url()}/{device_id}/click", {"duration": duration})
+    return _post_action(f"{get_api_url()}/{device_id}/click", {"duration": duration}, screen=screen)
 
 
 def tap_parameters(coords: tuple[int, int], duration: int, randomize: bool) -> dict[str, int | bool]:
@@ -73,7 +88,7 @@ def tap_parameters(coords: tuple[int, int], duration: int, randomize: bool) -> d
 
 def tap(
     device_id: str, coords: tuple[int, int], duration: int = 100,
-    *, randomize: bool = False,
+    *, randomize: bool = False, screen: bool = False,
 ) -> dict:
     """Move to coordinates and click in one call (with a device-settle delay).
 
@@ -82,13 +97,14 @@ def tap(
         coords: Tuple of (x, y) coordinates
         duration: Hold duration in milliseconds
         randomize: Apply the server's tap variation
+        screen: Return a fresh screen_state after the tap
     """
-    return _post_action(f"{get_api_url()}/{device_id}/tap", tap_parameters(coords, duration, randomize))
+    return _post_action(f"{get_api_url()}/{device_id}/tap", tap_parameters(coords, duration, randomize), screen=screen)
 
 
 def double_tap(
     device_id: str, coords: tuple[int, int], duration: int = 50, gap: int = 100,
-    *, randomize: bool = False,
+    *, randomize: bool = False, screen: bool = False,
 ) -> dict:
     """Move to coordinates and double-tap with timing handled by the device.
 
@@ -98,20 +114,23 @@ def double_tap(
         duration: Hold duration of each tap in milliseconds
         gap: Pause between taps in milliseconds
         randomize: Apply the server's double-tap variation
+        screen: Return a fresh screen_state after the double tap
     """
     payload = tap_parameters(coords, duration, randomize)
     payload["gap"] = gap
-    return _post_action(f"{get_api_url()}/{device_id}/double-tap", payload)
+    return _post_action(f"{get_api_url()}/{device_id}/double-tap", payload, screen=screen)
 
 
-def swipe_direction(device_id: str, direction: str, *, distance: str | None = None) -> dict:
+def swipe_direction(
+    device_id: str, direction: str, *, distance: str | None = None, screen: bool = False,
+) -> dict:
     payload = {"direction": direction}
     if distance is not None:
         payload["distance"] = distance
-    return _post_action(f"{get_api_url()}/{device_id}/swipe", payload)
+    return _post_action(f"{get_api_url()}/{device_id}/swipe", payload, screen=screen)
 
 
-def move(device_id, start, end, is_pressed=False, duration=300):
+def move(device_id, start, end, is_pressed=False, duration=300, *, screen=False):
     """Move mouse from start to end coordinates. Mouse released at end if pressed.
 
     Args:
@@ -120,6 +139,7 @@ def move(device_id, start, end, is_pressed=False, duration=300):
         end: Tuple of (x, y) end coordinates
         is_pressed: Whether mouse button is pressed during movement
         duration: Movement duration in milliseconds (0-5000)
+        screen: Return a fresh screen_state after the movement
     """
     start_x, start_y = start
     end_x, end_y = end
@@ -131,7 +151,7 @@ def move(device_id, start, end, is_pressed=False, duration=300):
         "is_pressed": is_pressed,
         "duration": duration
     }
-    return _post_action(f"{get_api_url()}/{device_id}/move", payload)
+    return _post_action(f"{get_api_url()}/{device_id}/move", payload, screen=screen)
 
 
 def get_screen_state(device_id):
@@ -146,7 +166,7 @@ def get_screen_state(device_id):
     return response.json()
 
 
-def scroll(device_id, direction, distance=300, duration=500):
+def scroll(device_id, direction, distance=300, duration=500, *, screen=False):
     """Scroll at the current cursor position.
 
     Args:
@@ -154,9 +174,10 @@ def scroll(device_id, direction, distance=300, duration=500):
         direction: "up" or "down"
         distance: Scroll distance (1-1000)
         duration: Scroll duration in milliseconds
+        screen: Return a fresh screen_state after the scroll
     """
     payload = {"direction": direction, "distance": distance, "duration": duration}
-    return _post_action(f"{get_api_url()}/{device_id}/scroll", payload)
+    return _post_action(f"{get_api_url()}/{device_id}/scroll", payload, screen=screen)
 
 
 def get_status(device_id):
@@ -174,24 +195,62 @@ def get_status(device_id):
     return result
 
 
-def type_text(device_id, text):
-    """Type text on the device.
+def type_text(device_id: str, text: str, delay: int = 0, *, screen: bool = False) -> dict:
+    """Type text on the device; returns once the device has been sent all of it.
 
     Args:
         device_id: Device ID
-        text: Text string to type (1-10000 characters)
+        text: Text string to type (1-10000 characters, at most 180 s of typing)
+        delay: Milliseconds between characters (0-1000); 0 uses the fastest safe pace
+        screen: Return a fresh screen_state after typing
     """
-    return _post_action(f"{get_api_url()}/{device_id}/keyboard/type", {"text": text})
+    payload: dict[str, str | int] = {"text": text}
+    if delay:
+        payload["delay"] = delay
+    return _post_action(f"{get_api_url()}/{device_id}/keyboard/type", payload, screen=screen)
 
 
-def key_combo(device_id, codes):
+def key_combo(device_id, codes, *, screen=False):
     """Press keys in order and release them in reverse (e.g. Cmd+Space).
 
     Args:
         device_id: Device ID
-        codes: List of key codes, e.g. ["MetaLeft", "Space"]
+        codes: List of up to 4 key codes, e.g. ["MetaLeft", "Space"]
+        screen: Return a fresh screen_state after the combo
     """
-    return _post_action(f"{get_api_url()}/{device_id}/keyboard/combo", {"codes": codes})
+    return _post_action(f"{get_api_url()}/{device_id}/keyboard/combo", {"codes": codes}, screen=screen)
+
+
+def show_keyboard(device_id: str, *, screen: bool = False) -> dict:
+    """Toggle the iOS on-screen keyboard, e.g. to tap emoji the hardware keyboard can't type.
+
+    Args:
+        device_id: Device ID
+        screen: Return a fresh screen_state after the toggle
+    """
+    return _post_action(f"{get_api_url()}/{device_id}/keyboard/show", screen=screen)
+
+
+def airplane_mode_pulse(device_id: str, coords: tuple[int, int]) -> dict:
+    """Tap the visible Airplane Mode switch twice, 10 seconds apart, timed on the Clicker.
+
+    Args:
+        device_id: Device ID
+        coords: (x, y) of the Airplane Mode switch, e.g. in an open Control Center
+    """
+    left, top = coords
+    return _post_action(f"{get_api_url()}/{device_id}/airplane-mode/pulse", {"left": left, "top": top})
+
+
+def get_stream(device_id: str) -> dict:
+    """Get a LiveKit URL and a subscribe-only token for the device's live screen.
+
+    Returns:
+        dict with url and token; the token admits one join within fifteen minutes
+    """
+    response = session.post(f"{get_api_url()}/{device_id}/stream", timeout=15)
+    response.raise_for_status()
+    return response.json()
 
 
 def get_screenshot(device_id):
@@ -255,18 +314,31 @@ def delete_media(device_id: str, media_id: str, timeout: float = 15) -> dict:
     return media_request("DELETE", f"/{device_id}/media/{media_id}", timeout)
 
 
-def run_agent(device_id, task):
+def run_agent(device_id: str, task: str, timezone: str | None = None) -> dict:
     """Start a new agent task.
 
     Args:
         device_id: Device ID
         task: Task instruction string
+        timezone: IANA name the agent reads the time in (e.g. "Europe/Moscow"); the server defaults to UTC
     """
+    payload = {"task": task}
+    if timezone is not None:
+        payload["timezone"] = timezone
     response = session.post(
         f"{get_api_url()}/{device_id}/agent/run",
-        json={"task": task},
+        json=payload,
         timeout=10,
     )
+    response.raise_for_status()
+    return response.json()
+
+
+def get_active_agent_task(device_id: str) -> dict | None:
+    """Get the agent task currently running on the device, or None if there is none."""
+    response = session.get(f"{get_api_url()}/{device_id}/agent", timeout=10)
+    if response.status_code == 404:
+        return None
     response.raise_for_status()
     return response.json()
 
@@ -302,13 +374,32 @@ def cancel_agent_task(device_id, task_id):
 
 
 def _parse_action_response(response):
-    """Safely parse a response from an action endpoint.
+    """Parse a response from an action endpoint into a dict with "success" and "message".
 
-    Action endpoints don't raise on failure and may return an empty body.
-    Falls back to a minimal dict so callers always get a consistent value.
+    A refused command (HTTP 4xx/5xx) becomes {"success": False, "message", "status_code"},
+    plus the server's "code" and "outcome" when it names them.
     """
     try:
-        return response.json()
-    except Exception:
+        body = response.json()
+    except ValueError:
         # a 2xx with an unparseable body is still an accepted action
         return {"success": response.ok, "message": f"Empty or invalid response (HTTP {response.status_code})"}
+    if response.ok:
+        return body
+    return _action_error(response.status_code, body)
+
+
+def _action_error(status_code: int, body) -> dict:
+    detail = body.get("detail") if isinstance(body, dict) else body
+    result = {"success": False, "message": f"HTTP {status_code}", "status_code": status_code}
+    if isinstance(detail, dict):
+        result["message"] = detail.get("message") or detail.get("error") or result["message"]
+        for key in ("code", "outcome"):
+            if key in detail:
+                result[key] = detail[key]
+    elif isinstance(detail, list):
+        # FastAPI validation errors
+        result["message"] = "; ".join(str(item.get("msg", item)) if isinstance(item, dict) else str(item) for item in detail)
+    elif detail:
+        result["message"] = str(detail)
+    return result
