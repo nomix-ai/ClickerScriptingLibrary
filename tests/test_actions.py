@@ -1,5 +1,7 @@
 """High-level action helpers that need no network."""
 
+import pytest
+
 from nomix_clicker import chance_tap, is_ad
 from nomix_clicker.recognition import Element, Screen
 
@@ -30,6 +32,38 @@ def test_chance_tap_always_taps_with_full_chance(fake_clicker):
     fake = fake_clicker
     assert chance_tap(fake, screen, "ac", 1.0) is True
     assert fake.clicked == [(1, 2)]
+
+
+def test_open_app_goes_home_then_searches_spotlight(monkeypatch, fake_clicker):
+    from nomix_clicker import actions as actions_mod
+
+    monkeypatch.setattr(actions_mod, "sleep", lambda s: None)
+    monkeypatch.setattr(actions_mod, "parse_screen", lambda c: _screen())
+    assert actions_mod.open_app(fake_clicker, "App") is not None
+    assert fake_clicker.combos == [
+        ["MetaLeft", "KeyH"], ["MetaLeft", "Space"], ["MetaLeft", "KeyA"], ["Backspace"], ["Enter"],
+    ]
+    assert fake_clicker.typed == ["App"]
+
+
+def test_open_app_retries_until_the_app_is_in_front(monkeypatch, fake_clicker):
+    from nomix_clicker import actions as actions_mod
+
+    screens = [Screen("Home Screen", "", [], 0.0), _screen()]
+    monkeypatch.setattr(actions_mod, "sleep", lambda s: None)
+    monkeypatch.setattr(actions_mod, "parse_screen", lambda c: screens.pop(0))
+    assert actions_mod.open_app(fake_clicker, "App", retries=2).app_name == "App"
+    assert fake_clicker.typed == ["App", "App"]
+
+
+def test_open_app_stops_an_attempt_when_a_step_is_refused(monkeypatch, fake_clicker):
+    from nomix_clicker import actions as actions_mod
+
+    monkeypatch.setattr(actions_mod, "sleep", lambda s: None)
+    monkeypatch.setattr(fake_clicker, "key_combo", lambda codes: {"success": False})
+    monkeypatch.setattr(actions_mod, "parse_screen", lambda c: pytest.fail("no screen without a launch"))
+    assert actions_mod.open_app(fake_clicker, "App", retries=2) is None
+    assert fake_clicker.typed == []
 
 
 def test_close_app_unconfirmed_when_screen_unavailable(monkeypatch, fake_clicker):

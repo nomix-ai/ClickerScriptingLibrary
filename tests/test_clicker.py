@@ -40,7 +40,7 @@ def test_swipe_computes_end_coords(monkeypatch):
     assert device_id == "dev"
     assert start == (10000, 10000)
     assert end == (10000, 4000)
-    assert kwargs == {"is_pressed": True, "duration": 300}
+    assert kwargs == {"is_pressed": True, "duration": 300, "screen": False}
 
 
 def test_swipe_combines_directions(monkeypatch):
@@ -61,7 +61,9 @@ def test_swipe_combines_directions(monkeypatch):
 )
 def test_directional_swipe_sends_profile_parameters(gesture_post: Mock, options: dict, payload: dict) -> None:
     assert Clicker("dev").swipe("up", **options) == {"success": True}
-    gesture_post.assert_called_once_with("https://example.invalid/clicker/v1/dev/swipe", json=payload, timeout=30)
+    gesture_post.assert_called_once_with(
+        "https://example.invalid/clicker/v1/dev/swipe", json=payload, timeout=api_helper.COMMAND_TIMEOUT,
+    )
 
 
 @pytest.mark.parametrize(
@@ -96,7 +98,41 @@ def test_tap_variation_is_an_opt_in_server_parameter(
     gesture = getattr(Clicker("dev"), method)
     assert gesture((500, 700), **options) == {"success": True}
     payload = {"left": 500, "top": 700, **timing, **extra}
-    gesture_post.assert_called_once_with(f"https://example.invalid/clicker/v1/dev/{route}", json=payload, timeout=30)
+    gesture_post.assert_called_once_with(
+        f"https://example.invalid/clicker/v1/dev/{route}", json=payload, timeout=api_helper.COMMAND_TIMEOUT,
+    )
+
+
+@pytest.mark.parametrize(
+    ("action", "route", "payload"),
+    [
+        (lambda c: c.click((500, 700), screen=True), "tap", {"left": 500, "top": 700, "duration": 100}),
+        (lambda c: c.swipe("up", screen=True), "swipe", {"direction": "up"}),
+        (lambda c: c.type("hi", screen=True), "keyboard/type", {"text": "hi"}),
+        (lambda c: c.show_keyboard(screen=True), "keyboard/show", None),
+    ],
+)
+def test_screen_option_asks_for_a_fresh_screen(gesture_post: Mock, action, route: str, payload: dict | None) -> None:
+    action(Clicker("dev"))
+    gesture_post.assert_called_once_with(
+        f"https://example.invalid/clicker/v1/dev/{route}?screen=true", json=payload, timeout=api_helper.COMMAND_TIMEOUT,
+    )
+
+
+def test_airplane_mode_pulse_sends_the_switch_position(gesture_post: Mock) -> None:
+    api_helper.airplane_mode_pulse("dev", (6523, 6689))
+    gesture_post.assert_called_once_with(
+        "https://example.invalid/clicker/v1/dev/airplane-mode/pulse",
+        json={"left": 6523, "top": 6689}, timeout=api_helper.COMMAND_TIMEOUT,
+    )
+
+
+@pytest.mark.parametrize(("delay", "payload"), [(0, {"text": "hi"}), (120, {"text": "hi", "delay": 120})])
+def test_type_waits_for_the_server_typing_deadline(gesture_post: Mock, delay: int, payload: dict) -> None:
+    Clicker("dev").type("hi", delay)
+    gesture_post.assert_called_once_with(
+        "https://example.invalid/clicker/v1/dev/keyboard/type", json=payload, timeout=api_helper.COMMAND_TIMEOUT,
+    )
 
 
 def test_click_taps_once(monkeypatch):

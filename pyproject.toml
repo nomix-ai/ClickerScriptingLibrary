@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nomix-clicker"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python automation for real iPhones — direct control, AI screen recognition, and autonomous agents."
 readme = "README.md"
 requires-python = ">=3.10"

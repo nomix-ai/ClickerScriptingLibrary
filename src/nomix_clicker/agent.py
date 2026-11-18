@@ -2,7 +2,7 @@ import time
 
 import requests
 
-from .api_helper import run_agent, get_agent_task, cancel_agent_task
+from .api_helper import run_agent, get_active_agent_task, get_agent_task, cancel_agent_task
 
 
 class Agent:
@@ -12,10 +12,17 @@ class Agent:
         self.device_id = device_id
         self.current_task_id: str | None = None
 
-    def execute(self, task: str) -> str:
-        """Start a new agent task. Returns task_id and stores it internally."""
-        self.current_task_id = run_agent(self.device_id, task).get("task_id")
+    def execute(self, task: str, timezone: str | None = None) -> str:
+        """Start a new agent task. Returns task_id and stores it internally.
+
+        `timezone` is the IANA name the agent reads the time in (server default UTC).
+        """
+        self.current_task_id = run_agent(self.device_id, task, timezone=timezone).get("task_id")
         return self.current_task_id
+
+    def get_active(self) -> dict | None:
+        """The task currently running on the device (from any client), or None."""
+        return get_active_agent_task(self.device_id)
 
     def _require_task_id(self, task_id: str | None) -> str:
         tid = task_id or self.current_task_id
@@ -70,11 +77,11 @@ class Agent:
 
             time.sleep(interval)
 
-    def run(self, task: str) -> str | None:
+    def run(self, task: str, timezone: str | None = None) -> str | None:
         """Convenience: execute a task and poll until done."""
         previous_task_id = self.current_task_id
         try:
-            self.execute(task)
+            self.execute(task, timezone)
             return self.poll()
         except BaseException:  # cancel on Ctrl-C and errors alike, then re-raise
             # cancel only the task this run() created, never one from a previous run

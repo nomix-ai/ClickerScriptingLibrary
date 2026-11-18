@@ -77,29 +77,39 @@ HID absolute coordinates: **0–32767** on both axes. Device-independent, same f
 clicker = Clicker(device_id: str)
 clicker.device_id: str                        # stored device ID
 
-clicker.click(coords: tuple[int, int], duration: int = 100)
+clicker.click(coords: tuple[int, int], duration: int = 100, *, randomize: bool = False, screen: bool = False)
 # Taps at coords (combined move+click in one call). duration = hold time in ms.
 
-clicker.double_tap(coords: tuple[int, int], duration: int = 50, gap: int = 100)
+clicker.double_tap(coords: tuple[int, int], duration: int = 50, gap: int = 100, *, randomize: bool = False, screen: bool = False)
 # Double-taps at coords in one device-timed action. duration = hold time of
 # each tap in ms; gap = pause between taps in ms (0-500).
 
-clicker.swipe(coords: tuple[int, int], up: int = 0, down: int = 0, left: int = 0, right: int = 0, duration: int = 300)
+clicker.swipe(coords: tuple[int, int], up: int = 0, down: int = 0, left: int = 0, right: int = 0, duration: int = 300, *, screen: bool = False)
 # Swipe from coords in given direction(s). Distance in HID units.
+clicker.swipe(direction: "up" | "down" | "left" | "right", *, distance: "short" | "normal" | None = None, screen: bool = False)
+# Randomized server swipe gesture in a direction.
 
-clicker.type(text: str)
-# Type text on device keyboard. Max 10000 chars.
+clicker.type(text: str, delay: int = 0, *, screen: bool = False)
+# Type text on device keyboard. Max 10000 chars and 180 s of typing; returns once
+# all of it is sent. delay = ms between characters (0 = fastest safe pace).
 
-clicker.key_combo(codes: list[str])
-# Press a key combination, e.g. ["MetaLeft", "Space"] for Spotlight.
+clicker.key_combo(codes: list[str], *, screen: bool = False)
+# Press a key combination of up to 4 keys, e.g. ["MetaLeft", "Space"] for Spotlight.
 # Keys pressed in order, released in reverse.
+
+clicker.show_keyboard(*, screen: bool = False)
+# Toggle the iOS on-screen keyboard (e.g. to tap emoji the hardware keyboard can't type).
 
 clicker.get_screenshot() -> bytes | None
 # Latest JPEG frame from the device stream, or None if no frame (stream down).
 # Raises requests.HTTPError on 401/403 — an auth problem, not a missing frame.
 ```
 
-Under the hood `Clicker.click` calls `POST /{device_id}/tap` (combined move+click with a device-settle delay), `double_tap` calls `POST /{device_id}/double-tap` (both taps timed locally by the device), and `swipe` calls `POST /{device_id}/move` (absolute coordinate movement). Action endpoints don't raise on failure — they return `{"success": bool, "message": str}`.
+Under the hood `Clicker.click` calls `POST /{device_id}/tap` (combined move+click with a device-settle delay), `double_tap` calls `POST /{device_id}/double-tap` (both taps timed locally by the device), and coordinate `swipe` calls `POST /{device_id}/move` (absolute coordinate movement). The server answers an action once it is sent to the device, not when the device finishes it.
+
+Action methods don't raise — they return `{"success": True, "message": str, ...}`, or on failure `{"success": False, "message": str}` plus `status_code` (for any HTTP error response), the server's `code`, and `outcome` when known. `outcome` is `not_sent` (nothing reached the device; safe to retry), `partial` or `unknown` (the device may have run some or all of it; check the screen before retrying). Network errors always carry one: `not_sent` when the connection never opened, `unknown` for a timeout or a connection dropped mid-request. A proxy error page (5xx without JSON) and an AI quota refusal of a `screen=True` action also report `unknown`.
+
+`screen=True` makes the server wait for the action to play out and add a fresh `screen_state` (one AI recognition request, counted against the quota) to the result; it is `None` when no frame arrived in time. `Screen.from_dict(result["screen_state"])` turns it into a `Screen`.
 
 ### Screen recognition
 
@@ -151,11 +161,12 @@ class Element:
 
 ```python
 open_app(clicker: Clicker, app_name: str, retries: int = 3) -> Screen | None
-# Opens Spotlight, types app name, taps result. Retries up to `retries` times.
-# Returns the parsed screen on success, or None on failure — check `if not screen:`.
+# From any screen: Home (Cmd+H), Spotlight (Cmd+Space), replaces the query with
+# app_name, Enter — the AI agent's sequence. Retries up to `retries` times.
+# Returns the parsed screen once the app is in front, or None — check `if not screen:`.
 
 close_app(clicker: Clicker, retries: int = 3) -> bool
-# Opens app switcher, dismisses the last app card, taps home.
+# Opens app switcher, dismisses the last app card, taps home (held 200 ms, as the agent does).
 # Returns True once the Home Screen is confirmed, False otherwise.
 
 find_and_click(clicker: Clicker, *keywords: str, interactive_only: bool = True) -> bool
@@ -206,9 +217,13 @@ upload_media(clicker: Clicker, path: str | Path, timeout: float = 300, interval:
 ```python
 agent = Agent(device_id: str)
 
-agent.execute(task: str) -> str
-# Start a new autonomous task. Returns task_id.
+agent.execute(task: str, timezone: str | None = None) -> str
+# Start a new autonomous task. Returns task_id. timezone = IANA name the agent
+# reads the time in (e.g. "Europe/Moscow"); the server defaults to UTC.
 # Only one task per device at a time (409 if already running).
+
+agent.get_active() -> dict | None
+# The task running on the device right now (started by any client), or None.
 
 agent.get_status(task_id: str | None = None) -> dict
 # Get task status. Uses current_task_id if none provided.
@@ -221,7 +236,7 @@ agent.poll(task_id: str | None = None, interval: float = 1.0) -> str | None
 # transient poll errors, raises on the 3rd. No timeout — cancel externally
 # via agent.cancel() if needed.
 
-agent.run(task: str) -> str | None
+agent.run(task: str, timezone: str | None = None) -> str | None
 # Convenience: execute + poll. On Ctrl-C or any error, cancels the task
 # (best effort) and re-raises.
 ```
@@ -250,9 +265,15 @@ tap(device_id, coords, duration=100)                        # POST /{id}/tap
 double_tap(device_id, coords, duration=50, gap=100)         # POST /{id}/double-tap
 click(device_id, duration=300)                              # POST /{id}/click
 move(device_id, start, end, is_pressed=False, duration=300) # POST /{id}/move
-type_text(device_id, text)                                  # POST /{id}/keyboard/type
+type_text(device_id, text, delay=0)                         # POST /{id}/keyboard/type
+key_combo(device_id, codes)                                 # POST /{id}/keyboard/combo
+show_keyboard(device_id)                                    # POST /{id}/keyboard/show
 scroll(device_id, direction, distance=300, duration=500)    # POST /{id}/scroll (distance 1-1000, at cursor position)
+# every action above also takes screen=True (adds ?screen=true)
+airplane_mode_pulse(device_id, coords)                      # POST /{id}/airplane-mode/pulse (two taps 10 s apart, timed on the Clicker)
+# actions wait up to 250 s: the server queues a command for up to 240 s
 get_screen_state(device_id)                                 # POST /{id}/screen-state
+get_stream(device_id)                                       # POST /{id}/stream (LiveKit url + subscribe-only token)
 get_screenshot(device_id)                                   # GET /{id}/screenshot
 send_media(device_id, path)                                 # POST /{id}/media (multipart, raises on HTTP errors)
 list_media(device_id)                                       # GET /{id}/media (latest files, newest first)
@@ -260,6 +281,8 @@ delete_media(device_id, media_id)                           # DELETE /{id}/media
 get_devices()                                               # GET /devices
 get_status(device_id)                                       # GET /{id}/status
 restart(device_id)                                          # POST /{id}/restart
+run_agent(device_id, task, timezone=None)                   # POST /{id}/agent/run
+get_active_agent_task(device_id)                            # GET /{id}/agent (None when no task runs)
 ```
 
 ## HTTP API error codes
@@ -267,16 +290,19 @@ restart(device_id)                                          # POST /{id}/restart
 | Code | Meaning |
 |---|---|
 | 200 | Success |
+| 400 | Command: parameters can't be executed on the device |
 | 401 | Invalid API key |
-| 403 | Device belongs to another user |
-| 404 | Device not connected |
-| 409 | Agent: device already has a running task |
+| 403 | Device belongs to another user; command: control permission denied |
+| 404 | Device does not exist; agent: no active task; screenshot/screen-state: no frame |
+| 409 | Agent: device already has a running task; command: interrupted |
 | 413 | Media: file is over 500 MB |
 | 415 | Media: file is not JPEG, PNG, HEIC, MP4 or MOV |
 | 421 | Media: sent to a node instead of `https://panel.nomixclicker.com` |
 | 422 | Invalid request payload (e.g. out-of-range values) |
-| 429 | AI request quota exceeded; media: device queue already holds 2048 MB |
+| 429 | AI request quota exceeded; command: control capacity exceeded; media: device queue already holds 2048 MB |
 | 502 | Vision API unavailable / no frame |
+| 503 | Command: device offline or delivery uncertain; device node or stream backend unreachable |
+| 504 | Command: expired before it was sent |
 | 507 | Media: server is low on disk space |
 
 ## Script template
@@ -319,7 +345,7 @@ if __name__ == "__main__":
 
 ## Conventions
 
-- **No `raise_for_status()`** on action endpoints (click, swipe, type). Only use on read/query endpoints (parse_screen, get_status, get_devices) and the media endpoints — `upload_media()` turns those errors into `None`.
+- **No `raise_for_status()`** on action endpoints (click, swipe, type) — `_post_action` turns refusals into `success: False` dicts. Only use on read/query endpoints (parse_screen, get_status, get_devices) and the media endpoints — `upload_media()` turns those errors into `None`.
 - **Error handling**: `parse_screen()` returns `None` on error — just check `if not screen:`.
 - **Timing**: always add `random_sleep()` between interactions for human-like variance.
 - **Screen reuse**: fetch once with `screen = parse_screen(clicker)`, then call `screen.find()`, `screen.contains()`, `screen.find_and_click()` multiple times. Use the standalone `find_and_click(clicker, ...)` only when you need a fresh screen capture.
